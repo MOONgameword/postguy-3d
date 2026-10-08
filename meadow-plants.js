@@ -35,6 +35,11 @@ export function createGrassCards(texture = null) {
   const material=new T.MeshLambertMaterial({name:'MeadowAlphaCards',map:texture,
     color:0xffffff,vertexColors:true,side:T.DoubleSide,transparent:true,
     alphaTest:.08,depthWrite:true,forceSinglePass:true});
+  material.onBeforeCompile = shader => {
+    shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',
+      T.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;',''));
+  };
+  material.customProgramCacheKey=()=> 'grass-card-soft-normals-v1';
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
@@ -105,7 +110,9 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
   function material(flower = false, base = null) {
     const mat = base || (flower ? new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide })
       : new T.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side: T.DoubleSide }));
+    const baseCompile = mat.onBeforeCompile;
     mat.onBeforeCompile = shader => {
+      baseCompile.call(mat, shader);
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = 'uniform float meadowTime; uniform float meadowRange; uniform vec3 meadowFocus;\n' + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `

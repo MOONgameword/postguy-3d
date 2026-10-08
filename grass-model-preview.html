@@ -3,7 +3,7 @@
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 <nav>半透明插片草 · 保留原贴图透明边缘</nav>
 <script type="module">
-import * as T from 'three';import {createGrassCards} from './meadow-plants.js?v=20261008-01';
+import * as T from 'three';import {createGrassCards} from './meadow-plants.js?v=20261008-02';
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);document.body.append(renderer.domElement);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 const scene=new T.Scene();scene.background=new T.Color('#d9e4d9');scene.add(new T.HemisphereLight(0xf1f4d9,0x65734c,2));const sun=new T.DirectionalLight(0xffefc7,2.8);sun.position.set(2,5,3);scene.add(sun);
 const texture=await new T.TextureLoader().loadAsync('./assets/trees/grass-cards-v1-512.png'),asset=createGrassCards(texture);const mesh=new T.Mesh(asset.geometry,asset.material);scene.add(mesh);
