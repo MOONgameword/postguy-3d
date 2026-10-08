@@ -1,12 +1,12 @@
-<!doctype html><html lang="zh"><meta charset="utf-8"><title>grass.fbx 草模型检查</title>
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>半透明插片草检查</title>
 <style>body{margin:0;background:#d9e4d9;font:14px sans-serif}nav{position:fixed;z-index:2;top:18px;left:20px;background:#fffde8;padding:12px;border-radius:8px}</style>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
-<nav>grass.fbx + s14_grass1_d_convert.tga（红白遮罩已转为绿色草叶）</nav>
+<nav>半透明插片草 · 保留原贴图透明边缘</nav>
 <script type="module">
-import * as T from 'three';import {loadGrassModel} from './meadow-plants.js?v=20261001-08';
+import * as T from 'three';import {createGrassCards} from './meadow-plants.js?v=20261008-01';
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);document.body.append(renderer.domElement);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 const scene=new T.Scene();scene.background=new T.Color('#d9e4d9');scene.add(new T.HemisphereLight(0xf1f4d9,0x65734c,2));const sun=new T.DirectionalLight(0xffefc7,2.8);sun.position.set(2,5,3);scene.add(sun);
-const bytes=await (await fetch('./assets/trees/grass-v1.fbx')).arrayBuffer(),texture=await new T.TextureLoader().loadAsync('./assets/trees/grass-v1-mask.png'),asset=loadGrassModel(bytes,texture);const mesh=new T.Mesh(asset.geometry,asset.material);scene.add(mesh);
+const texture=await new T.TextureLoader().loadAsync('./assets/trees/grass-cards-v1-512.png'),asset=createGrassCards(texture);const mesh=new T.Mesh(asset.geometry,asset.material);scene.add(mesh);
 const floor=new T.Mesh(new T.PlaneGeometry(8,8),new T.MeshLambertMaterial({color:0x91ad63}));floor.rotation.x=-Math.PI/2;floor.position.y=-.01;scene.add(floor);const camera=new T.PerspectiveCamera(35,innerWidth/innerHeight,.01,30);camera.position.set(1.8,1.2,3.3);camera.lookAt(0,.35,0);
 renderer.setAnimationLoop(t=>{mesh.rotation.y=t*.00015;renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.render(scene,camera)});
 </script></html>

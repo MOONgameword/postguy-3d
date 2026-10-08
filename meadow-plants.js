@@ -1,61 +1,41 @@
 import * as T from 'three';
-import { FBXLoader } from './vendor/loaders/FBXLoader.js';
 import { lakeMetric } from './lakeside.js?v=20260930-22';
 
-export const GRASS_MODEL_URL = './assets/trees/grass-v1.fbx';
-export const GRASS_TEXTURE_URL = './assets/trees/grass-v1-mask.png';
+export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
 
-export function loadGrassModel(buffer, texture) {
-  const root = new FBXLoader().parse(buffer, './assets/trees/');
-  root.updateMatrixWorld(true);
-  const meshes = [];
-  root.traverse(o => { if (o.isMesh) meshes.push(o); });
-  if (meshes.length !== 1) throw new Error('grass.fbx 需要单一草模型网格');
-  const source = meshes[0], geometry = source.geometry.index ? source.geometry.toNonIndexed() : source.geometry.clone();
-  geometry.applyMatrix4(source.matrixWorld);
-  geometry.computeBoundingBox();
-  const box = geometry.boundingBox, size = box.getSize(new T.Vector3());
-  if (!(size.y > 0)) throw new Error('grass.fbx 高度无效');
-  const center = new T.Vector3((box.min.x + box.max.x) * .5, box.min.y, (box.min.z + box.max.z) * .5);
-  geometry.translate(-center.x, -center.y, -center.z);
-  // The source is authored in millimetres. Fit the supplied silhouette to the
-  // existing meadow blade height while keeping its broad, soft shape.
-  geometry.scale(1.2705 / size.y, 1.2705 / size.y, 1.2705 / size.y);
-  geometry.computeBoundingBox(); geometry.computeBoundingSphere();
-  if (texture) { texture.colorSpace = T.NoColorSpace; texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping; texture.needsUpdate = true; }
-  const material = new T.MeshLambertMaterial({
-    name: 'HeartTownGrass', map: texture || null, color: 0xffffff,
-    transparent: true, alphaTest: .28, side: T.DoubleSide, vertexColors: true
-  });
-  const pos = geometry.attributes.position, colors = new Float32Array(pos.count * 3);
-  const minY = geometry.boundingBox.min.y, maxY = geometry.boundingBox.max.y;
-  const bottom = new T.Color('#8eae55'), top = new T.Color('#d8e992'), c = new T.Color();
-  for (let i = 0; i < pos.count; i++) {
-    const t = T.MathUtils.smoothstep(pos.getY(i), minY, maxY);
-    c.copy(bottom).lerp(top, t); colors.set(c.toArray(), i * 3);
+// Alpha silhouette from the supplied TGA, with no FBX or solid grass geometry.
+export function createGrassCards(texture = null) {
+  if (texture) {
+    texture.colorSpace = T.NoColorSpace;
+    texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
+    texture.minFilter = T.LinearMipmapLinearFilter;
+    texture.magFilter = T.LinearFilter;
+    texture.generateMipmaps = true; texture.needsUpdate = true;
   }
-  geometry.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
-  // Keep a quarter of the source triangles for the distant ring. It uses the
-  // same UV mask and gradient, but cuts far-field vertex work substantially.
-  const farPositions = [], farNormals = [], farUvs = [], farColors = [];
-  const normal = geometry.attributes.normal, uv = geometry.attributes.uv, colorAttr = geometry.attributes.color;
-  for (let tri = 0; tri < pos.count / 3; tri++) {
-    if (tri % 4 !== 0) continue;
-    for (let k = 0; k < 3; k++) {
-      const i = tri * 3 + k;
-      farPositions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
-      if (normal) farNormals.push(normal.getX(i), normal.getY(i), normal.getZ(i));
-      if (uv) farUvs.push(uv.getX(i), uv.getY(i));
-      farColors.push(colorAttr.getX(i), colorAttr.getY(i), colorAttr.getZ(i));
+  function cards(count) {
+    const positions=[],uvs=[],normals=[],colors=[];
+    const bottom=new T.Color('#8eae55'),top=new T.Color('#d8e992');
+    for(let n=0;n<count;n++) {
+      const angle=n*Math.PI/count,dx=Math.cos(angle),dz=Math.sin(angle);
+      for(const i of [0,1,2,0,2,3]) {
+        const [x,y,u,v]=[[-.93,0,0,0],[.93,0,1,0],[.93,1.2705,1,.69],[-.93,1.2705,0,.69]][i];
+        positions.push(x*dx,y,x*dz);uvs.push(u,v);
+        // Upward-biased normals blend the cards into the turf under sunlight.
+        normals.push(-dz*.4,Math.sqrt(.84),dx*.4);
+        colors.push(...(y===0?bottom:top).toArray());
+      }
     }
+    const g=new T.BufferGeometry();
+    g.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+    g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
+    g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));
+    g.setAttribute('color',new T.Float32BufferAttribute(colors,3));
+    g.computeBoundingBox();g.computeBoundingSphere();return g;
   }
-  const farGeometry = new T.BufferGeometry();
-  farGeometry.setAttribute('position', new T.Float32BufferAttribute(farPositions, 3));
-  if (farNormals.length) farGeometry.setAttribute('normal', new T.Float32BufferAttribute(farNormals, 3));
-  if (farUvs.length) farGeometry.setAttribute('uv', new T.Float32BufferAttribute(farUvs, 2));
-  farGeometry.setAttribute('color', new T.Float32BufferAttribute(farColors, 3));
-  farGeometry.computeBoundingBox(); farGeometry.computeBoundingSphere();
-  return { geometry, farGeometry, material, sourceSize: size.toArray() };
+  const material=new T.MeshLambertMaterial({name:'MeadowAlphaCards',map:texture,
+    color:0xffffff,vertexColors:true,side:T.DoubleSide,transparent:true,
+    alphaTest:.08,depthWrite:true,forceSinglePass:true});
+  return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
 const CELL = 48;
@@ -98,26 +78,14 @@ export function scatterMeadow(planet, allowed = () => true) {
   return { bins, stats: { roots: count, flowers, cells: bins.size } };
 }
 
-function bladeGeometry(stem = false) {
-  const positions = [], colors = [];
-  const dark = new T.Color(stem ? '#4b7942' : '#477d3f'), light = new T.Color(stem ? '#96b66a' : '#b9d77b');
-  if (!stem) {
-    // Heart Town style: one soft, rounded blade per root. The shallow shoulder
-    // and curved tip catch light like broad meadow grass instead of sharp cards.
-    const width = .09, h = .78;
-    const points = [[-width,0],[width,0],[width * 1.02,h*.55],[width*.64,h*.88],[0,h],[-width*.64,h*.88],[-width*1.02,h*.55]];
-    const triangles = [0,1,2, 0,2,6, 6,2,3, 6,3,5, 5,3,4];
-    for (const index of triangles) {
-      const [x,y] = points[index]; positions.push(x,y,0);
-      const color = dark.clone().lerp(light, y / h); colors.push(color.r,color.g,color.b);
-    }
-  } else for (let j = 0; j < 2; j++) {
-    const angle = j * 2.399, dx = Math.cos(angle), dz = Math.sin(angle);
-    const width = stem ? .055 : .12, h = stem ? 1.38 : 1 - j * .13, lean = stem ? 0 : .16;
-    const points = [[-width, 0], [width, 0], [width + lean, h * .9], [lean + width * .45, h], [lean - width * .45, h], [lean - width, h * .9]];
-    for (const index of [0, 1, 2, 0, 2, 5, 5, 2, 3, 5, 3, 4]) {
-      const [x, y] = points[index]; positions.push(dx * x, y, dz * x);
-      const color = dark.clone().lerp(light, y / h); colors.push(color.r, color.g, color.b);
+function stemGeometry() {
+  const positions=[],colors=[];
+  const dark=new T.Color('#4b7942'),light=new T.Color('#96b66a');
+  for(let j=0;j<2;j++) {
+    const angle=j*2.399,dx=Math.cos(angle),dz=Math.sin(angle),w=.055,h=1.38;
+    for(const i of [0,1,2,0,2,3]) {
+      const [x,y]=[[-w,0],[w,0],[w,h],[-w,h]][i];
+      positions.push(dx*x,y,dz*x);colors.push(...dark.clone().lerp(light,y/h).toArray());
     }
   }
   const geo = new T.BufferGeometry();
@@ -126,19 +94,17 @@ function bladeGeometry(stem = false) {
   geo.computeVertexNormals(); return geo;
 }
 
-export function createMeadowPlants(scene, field, { mobile = false, model = null } = {}) {
+export function createMeadowPlants(scene, field, { mobile = false, model = createGrassCards() } = {}) {
   const range = mobile ? 660 : 900;
   const nearRange = mobile ? 240 : 330;
-  // The close ring keeps the supplied model. The distant ring uses its
-  // quarter-triangle LOD, so doubling the loaded radius does not double the
-  // expensive near geometry.
+  // Three crossed cards nearby, two in the distant ring; keep existing budgets.
   const capacity = model ? (mobile ? 1620 : 3780) : (mobile ? 28000 : 64000);
   const farCapacity = model ? (mobile ? 4000 : 10000) : 0;
   const densityKeep = model ? .6 : 1;
   const uniforms = { meadowTime: { value: 0 }, meadowFocus: { value: new T.Vector3() }, meadowRange: { value: range } };
-  function material(flower = false) {
-    const mat = flower ? new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide })
-      : new T.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side: T.DoubleSide });
+  function material(flower = false, base = null) {
+    const mat = base || (flower ? new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide })
+      : new T.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side: T.DoubleSide }));
     mat.onBeforeCompile = shader => {
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = 'uniform float meadowTime; uniform float meadowRange; uniform vec3 meadowFocus;\n' + shader.vertexShader;
@@ -151,20 +117,20 @@ export function createMeadowPlants(scene, field, { mobile = false, model = null 
       `);
       if (flower) shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `
         float size = length(instanceMatrix[0].xyz);
-        float sway = sin(meadowTime * 1.65 + root.x * .16 + root.z * .11) * .138 * growth;
+        float sway = sin(meadowTime * 1.35 + root.x * .16 + root.z * .11) * .1035 * growth;
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(sway, 1.38 * growth, 0., 1.);
         mvPosition.xy += position.xy * size * growth;
         gl_Position = projectionMatrix * mvPosition;
       `);
     };
-    mat.customProgramCacheKey = () => `meadow-v1-${flower}`;
+    mat.customProgramCacheKey = () => `meadow-cards-v1-${flower}`;
     return mat;
   }
-  const grassGeometry = model?.geometry || bladeGeometry();
-  const grassMaterial = model?.material || material();
+  const grassGeometry = model.geometry;
+  const grassMaterial = material(false, model.material);
   const grass = new T.InstancedMesh(grassGeometry, grassMaterial, capacity);
   const farGrass = model?.farGeometry ? new T.InstancedMesh(model.farGeometry, grassMaterial, farCapacity) : null;
-  const stems = new T.InstancedMesh(bladeGeometry(true), material(), Math.ceil(capacity * .14));
+  const stems = new T.InstancedMesh(stemGeometry(), material(), Math.ceil(capacity * .14));
   const blooms = new T.InstancedMesh(new T.CircleGeometry(.30, 12), material(true), stems.instanceMatrix.count);
   const renderMeshes = [[grass, 'MeadowBlades'], ...(farGrass ? [[farGrass, 'MeadowFarBlades']] : []), [stems, 'MeadowStems'], [blooms, 'MeadowRoundFlowers']];
   for (const [mesh, name] of renderMeshes) {
@@ -187,10 +153,12 @@ export function createMeadowPlants(scene, field, { mobile = false, model = null 
       if (data) cells.push({ data, distance: p.set((x + .5) * CELL, (y + .5) * CELL, (z + .5) * CELL).distanceToSquared(focus) });
     }
     cells.sort((a, b) => a.distance - b.distance);
-    for (const { data } of cells) for (let i = 0; i < data.length; i += 5) {
+    roots: for (const { data } of cells) for (let i = 0; i < data.length; i += 5) {
       p.fromArray(data, i); const distanceSq = p.distanceToSquared(focus); if (distanceSq > range * range) continue;
       const seed = data[i + 3], flower = data[i + 4] > 0;
       if (seed > densityKeep || (mobile && seed < .22)) continue;
+      if(gi>=capacity && (!farGrass || fgi>=farCapacity)) break roots;
+      if(distanceSq<=nearRange*nearRange ? gi>=capacity : !farGrass || fgi>=farCapacity) continue;
       up.copy(p).normalize(); q.setFromUnitVectors(axis, up).multiply(yaw.setFromAxisAngle(axis, seed * Math.PI * 2));
       const size = .68 + seed * .55;
       // Sink roots slightly so no sliver appears between blades and sloping land.
