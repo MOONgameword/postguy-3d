@@ -4,7 +4,7 @@ import { lakeMetric } from './lakeside.js?v=20260930-22';
 export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
 
 // Alpha silhouette from the supplied TGA, with no FBX or solid grass geometry.
-export function createGrassCards(texture = null) {
+export function createGrassCards(texture = null, turf = null) {
   if (texture) {
     texture.colorSpace = T.NoColorSpace;
     texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
@@ -21,7 +21,7 @@ export function createGrassCards(texture = null) {
         const [x,y,u,v]=[[-.93,0,0,0],[.93,0,1,0],[.93,1.2705,1,.69],[-.93,1.2705,0,.69]][i];
         positions.push(x*dx,y,x*dz);uvs.push(u,v);
         // Upward-biased normals blend the cards into the turf under sunlight.
-        normals.push(-dz*.4,Math.sqrt(.84),dx*.4);
+        normals.push(0,1,0);
         colors.push(...(y===0?bottom:top).toArray());
       }
     }
@@ -32,14 +32,42 @@ export function createGrassCards(texture = null) {
     g.setAttribute('color',new T.Float32BufferAttribute(colors,3));
     g.computeBoundingBox();g.computeBoundingSphere();return g;
   }
-  const material=new T.MeshLambertMaterial({name:'MeadowAlphaCards',map:texture,
-    color:0xffffff,vertexColors:true,side:T.DoubleSide,transparent:true,
+  const material=new T.MeshStandardMaterial({name:'MeadowAlphaCards',roughness:1,metalness:0,map:texture,
+    color:0xffffff,vertexColors:!turf,side:T.DoubleSide,transparent:true,
     alphaTest:.08,depthWrite:true,forceSinglePass:true});
   material.onBeforeCompile = shader => {
+    // Both faces use the ground-facing normal, including on instanced cards.
     shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',
       T.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;',''));
+    if (!turf) return;
+    Object.assign(shader.uniforms,{turfBase:{value:turf.base},turfNap:{value:turf.nap}});
+    shader.vertexShader='varying vec3 grassGroundPosition; varying float grassHeight;\n'+shader.vertexShader;
+    shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+      vec4 groundVertex=vec4(position.x,0.,position.z,1.);
+      #ifdef USE_INSTANCING
+        groundVertex=instanceMatrix*groundVertex;
+      #endif
+      grassGroundPosition=(modelMatrix*groundVertex).xyz;
+      grassHeight=position.y/1.2705;
+    `);
+    shader.fragmentShader='varying vec3 grassGroundPosition; varying float grassHeight; uniform sampler2D turfBase; uniform sampler2D turfNap;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      // Same world mapping, linear palette and grain as City_Grass.
+      vec3 gp=grassGroundPosition;
+      vec3 w=pow(abs(normalize(gp)),vec3(4.)); w/=dot(w,vec3(1.));
+      vec3 sp=gp/14.;
+      vec3 albedo=texture2D(turfBase,sp.yz).rgb*w.x+texture2D(turfBase,sp.xz).rgb*w.y+texture2D(turfBase,sp.xy).rgb*w.z;
+      float lum=dot(albedo,vec3(.2126,.7152,.0722));
+      float rolling=.5+.13*sin(dot(gp,vec3(.019,.027,.013)))+.13*sin(dot(gp,vec3(-.037,.011,.023)));
+      float tone=clamp(.30+lum*1.35+rolling*.22,0.,1.);
+      float grain=texture2D(turfNap,sp.yz).r*w.x+texture2D(turfNap,sp.xz).r*w.y+texture2D(turfNap,sp.xy).r*w.z;
+      vec3 groundColor=mix(vec3(.09,.20,.040),vec3(.34,.52,.105),tone)*(.48+1.05*grain);
+      float tip=smoothstep(.18,1.,grassHeight);
+      diffuseColor.rgb*=mix(groundColor,groundColor*1.16+vec3(.022,.026,.008),tip);
+      diffuseColor.a*=smoothstep(0.,.14,grassHeight);
+    `);
   };
-  material.customProgramCacheKey=()=> 'grass-card-soft-normals-v1';
+  material.customProgramCacheKey=()=> `grass-ground-blend-v2-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
@@ -100,7 +128,7 @@ function stemGeometry() {
 }
 
 export function createMeadowPlants(scene, field, { mobile = false, model = createGrassCards() } = {}) {
-  const range = mobile ? 660 : 900;
+  const range = mobile ? 1320 : 1800;
   const nearRange = mobile ? 240 : 330;
   // Three crossed cards nearby, two in the distant ring; keep existing budgets.
   const capacity = model ? (mobile ? 1620 : 3780) : (mobile ? 28000 : 64000);
@@ -111,6 +139,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
     const mat = base || (flower ? new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide })
       : new T.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side: T.DoubleSide }));
     const baseCompile = mat.onBeforeCompile;
+    const baseKey = mat.customProgramCacheKey();
     mat.onBeforeCompile = shader => {
       baseCompile.call(mat, shader);
       Object.assign(shader.uniforms, uniforms);
@@ -130,7 +159,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
         gl_Position = projectionMatrix * mvPosition;
       `);
     };
-    mat.customProgramCacheKey = () => `meadow-cards-v1-${flower}`;
+    mat.customProgramCacheKey = () => `meadow-ground-v2-${flower}-${baseKey}`;
     return mat;
   }
   const grassGeometry = model.geometry;
@@ -142,23 +171,27 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
   const renderMeshes = [[grass, 'MeadowBlades'], ...(farGrass ? [[farGrass, 'MeadowFarBlades']] : []), [stems, 'MeadowStems'], [blooms, 'MeadowRoundFlowers']];
   for (const [mesh, name] of renderMeshes) {
     mesh.name = name; mesh.count = 0; mesh.frustumCulled = false;
-    mesh.castShadow = false; mesh.receiveShadow = false;
+    mesh.castShadow = false; mesh.receiveShadow = name === 'MeadowBlades' || name === 'MeadowFarBlades';
     mesh.instanceMatrix.setUsage(T.DynamicDrawUsage); scene.add(mesh);
   }
   const last = new T.Vector3(Infinity, 0, 0), p = new T.Vector3(), up = new T.Vector3(), scale = new T.Vector3();
   const q = new T.Quaternion(), yaw = new T.Quaternion(), axis = new T.Vector3(0, 1, 0), matrix = new T.Matrix4();
   const colors = ['#f3ce55', '#ead9b3'].map(c => new T.Color(c));
-  const grassTints = ['#6f9e4c','#86ad55','#9bc265','#b0cf76'].map(c => new T.Color(c));
+
   function update(time, focus) {
     uniforms.meadowTime.value = time; uniforms.meadowFocus.value.copy(focus);
     if (last.distanceToSquared(focus) < 36) return;
     last.copy(focus); let gi = 0, fgi = 0, fi = 0;
-    const cells = [], reach = Math.ceil(range / CELL);
-    const cx = Math.floor(focus.x / CELL), cy = Math.floor(focus.y / CELL), cz = Math.floor(focus.z / CELL);
-    for (let x = cx - reach; x <= cx + reach; x++) for (let y = cy - reach; y <= cy + reach; y++) for (let z = cz - reach; z <= cz + reach; z++) {
-      const data = field.bins.get(key(x, y, z));
-      if (data) cells.push({ data, distance: p.set((x + .5) * CELL, (y + .5) * CELL, (z + .5) * CELL).distanceToSquared(focus) });
+    // Visit occupied bins only, rather than millions of empty cube cells.
+    const cells=[];
+    for(const [cellKey,data] of field.bins) {
+      const [x,y,z]=cellKey.split(',').map(Number);
+      const distance=p.set((x+.5)*CELL,(y+.5)*CELL,(z+.5)*CELL).distanceToSquared(focus);
+      if(distance>(range+CELL)* (range+CELL)) continue;
+      cells.push({data,distance});
     }
+    const farCells=cells.filter(c=>c.distance>(nearRange-CELL)**2).length;
+    const farQuota=Math.max(1,Math.floor(farCapacity/Math.max(1,farCells)));
     cells.sort((a, b) => a.distance - b.distance);
     roots: for (const { data } of cells) for (let i = 0; i < data.length; i += 5) {
       p.fromArray(data, i); const distanceSq = p.distanceToSquared(focus); if (distanceSq > range * range) continue;
@@ -166,17 +199,19 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
       if (seed > densityKeep || (mobile && seed < .22)) continue;
       if(gi>=capacity && (!farGrass || fgi>=farCapacity)) break roots;
       if(distanceSq<=nearRange*nearRange ? gi>=capacity : !farGrass || fgi>=farCapacity) continue;
+      // Evenly distribute far cards across bins; never exhaust the pool in
+      // the first few cells and leave the expanded distance empty.
+      if(distanceSq>nearRange*nearRange && Math.floor(i/5)%Math.max(1,Math.ceil(data.length/5/farQuota))!==0) continue;
       up.copy(p).normalize(); q.setFromUnitVectors(axis, up).multiply(yaw.setFromAxisAngle(axis, seed * Math.PI * 2));
       const size = .68 + seed * .55;
       // Sink roots slightly so no sliver appears between blades and sloping land.
       matrix.compose(p.addScaledVector(up, -.08), q, scale.set(size, size, size));
-      const tint = grassTints[Math.min(grassTints.length - 1, Math.floor(seed * grassTints.length))];
       if (distanceSq <= nearRange * nearRange) {
         if (gi >= capacity) continue;
-        grass.setMatrixAt(gi, matrix); grass.setColorAt(gi, tint); gi++;
+        grass.setMatrixAt(gi++, matrix);
       } else if (farGrass) {
         if (fgi >= farCapacity) continue;
-        farGrass.setMatrixAt(fgi, matrix); farGrass.setColorAt(fgi, tint); fgi++;
+        farGrass.setMatrixAt(fgi++, matrix);
       } else continue;
       if (flower && fi < stems.instanceMatrix.count) {
         stems.setMatrixAt(fi, matrix); blooms.setMatrixAt(fi, matrix);

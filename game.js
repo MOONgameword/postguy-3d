@@ -8,9 +8,9 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20260929-11';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261008-03';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-02';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-03';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
@@ -2326,7 +2326,7 @@ async function boot() {
     return true;
   });
   setProgress(0.64, '铺设半透明插片草…');
-  const grassAsset = createGrassCards(await loadTex(GRASS_TEXTURE_URL));
+  const grassAsset = createGrassCards(await loadTex(GRASS_TEXTURE_URL), surfaces.grassAppearance);
   meadowPlants = createMeadowPlants(scene, meadowField, { mobile: IS_MOBILE, model: grassAsset });
   if (DEBUG) console.info('Meadow plants:', meadowPlants.stats);
   buildMiniImage();

@@ -32,7 +32,7 @@ assert.ok(plants.grass.count > 0 && plants.blooms.count > 0);
 assert.equal(plants.stems.count, plants.blooms.count);
 assert.ok(plants.grass.count <= plants.stats.maxGrass);
 assert.equal(scene.children.length, 4);
-plants.update(1, new T.Vector3(-650, 0, 0));
+plants.update(1, new T.Vector3(-5000, 0, 0));
 assert.equal(plants.grass.count, 0, 'Moving to an empty region must clear old instances');
 assert.deepEqual(planet.geometry.attributes.position.array, original, 'Decoration cannot change terrain/collision geometry');
 console.log(JSON.stringify({ result: 'PASS', ...field.stats, terrainRayChecks: tested.length, maxDrawCalls: 4 }, null, 2));

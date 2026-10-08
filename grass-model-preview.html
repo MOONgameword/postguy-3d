@@ -1,12 +1,18 @@
-<!doctype html><html lang="zh"><meta charset="utf-8"><title>半透明插片草检查</title>
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>草地融合检查</title>
 <style>body{margin:0;background:#d9e4d9;font:14px sans-serif}nav{position:fixed;z-index:2;top:18px;left:20px;background:#fffde8;padding:12px;border-radius:8px}</style>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
-<nav>半透明插片草 · 保留原贴图透明边缘</nav>
+<nav>草根与地面共用纹理 · 草尖柔和渐变 · 正反面统一受光</nav>
 <script type="module">
-import * as T from 'three';import {createGrassCards} from './meadow-plants.js?v=20261008-02';
-const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);document.body.append(renderer.domElement);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
-const scene=new T.Scene();scene.background=new T.Color('#d9e4d9');scene.add(new T.HemisphereLight(0xf1f4d9,0x65734c,2));const sun=new T.DirectionalLight(0xffefc7,2.8);sun.position.set(2,5,3);scene.add(sun);
-const texture=await new T.TextureLoader().loadAsync('./assets/trees/grass-cards-v1-512.png'),asset=createGrassCards(texture);const mesh=new T.Mesh(asset.geometry,asset.material);scene.add(mesh);
-const floor=new T.Mesh(new T.PlaneGeometry(8,8),new T.MeshLambertMaterial({color:0x91ad63}));floor.rotation.x=-Math.PI/2;floor.position.y=-.01;scene.add(floor);const camera=new T.PerspectiveCamera(35,innerWidth/innerHeight,.01,30);camera.position.set(1.8,1.2,3.3);camera.lookAt(0,.35,0);
-renderer.setAnimationLoop(t=>{mesh.rotation.y=t*.00015;renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.render(scene,camera)});
+import * as T from 'three';
+import {createGrassCards} from './meadow-plants.js?v=20261008-03';
+import {installSurfaceMaterials} from './surface-materials.js?v=20261008-03';
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);document.body.append(renderer.domElement);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+const scene=new T.Scene();scene.background=new T.Color('#d9e4d9');scene.add(new T.HemisphereLight(0xb9c9c5,0x969b7d,1.35),new T.AmbientLight(0xe4dfcc,.55));const sun=new T.DirectionalLight(0xfff8e6,1.3);sun.position.set(2,5,3);scene.add(sun);
+const floor=new T.Mesh(new T.PlaneGeometry(40,40),new T.MeshStandardMaterial({name:'City_Grass'}));floor.name='Planet';floor.rotation.x=-Math.PI/2;floor.position.y=600;scene.add(floor);
+const loader=new T.TextureLoader(),surfaces=await installSurfaceMaterials(scene,renderer,url=>loader.loadAsync(url));
+const asset=createGrassCards(await loader.loadAsync('./assets/trees/grass-cards-v1-512.png'),surfaces.grassAppearance);
+const mesh=new T.InstancedMesh(asset.geometry,asset.material,60);const obj=new T.Object3D();
+for(let i=0;i<60;i++){obj.position.set(Math.sin(i*41.7)*7,599.92,Math.cos(i*17.1)*6);obj.rotation.y=i*2.4;obj.updateMatrix();mesh.setMatrixAt(i,obj.matrix)}scene.add(mesh);
+const camera=new T.PerspectiveCamera(40,innerWidth/innerHeight,.01,100);camera.position.set(6,603.3,8);camera.lookAt(0,600.3,0);
+renderer.setAnimationLoop(()=>{renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.render(scene,camera)});
 </script></html>

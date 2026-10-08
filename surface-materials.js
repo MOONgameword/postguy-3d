@@ -123,5 +123,5 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     });
     mesh.material = single ? materials[0] : materials;
   });
-  return { counts, textureCount: textures.length * 2 + 1, resolution: 512 };
+  return { grassAppearance: {base:grass.base,nap}, counts, textureCount: textures.length * 2 + 1, resolution: 512 };
 }
