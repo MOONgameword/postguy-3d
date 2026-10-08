@@ -8,9 +8,9 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261008-04';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261008-05';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-04';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-05';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
@@ -88,7 +88,7 @@ renderer.toneMappingExposure = 1.12;
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xd9d5bf, CFG.fog[0], CFG.fog[1]);
 
-const camera = new THREE.PerspectiveCamera(48, 1, 0.15 * S, 1800);
+const camera = new THREE.PerspectiveCamera(48, 1, 0.15 * S, 5200);
 camera.position.set(0, 6, -10);
 
 function cloudTexture() {
@@ -2028,7 +2028,7 @@ function updateFoot(dt) {
 const camGoal = new THREE.Vector3(), lookGoal = new THREE.Vector3();
 const camQ = new THREE.Quaternion();
 const _cUp = new THREE.Vector3(), _cDir = new THREE.Vector3();
-const _cdU = new THREE.Vector3(), _cdQ = new THREE.Quaternion();
+const _cdU = new THREE.Vector3(), _cdQ = new THREE.Quaternion(), _scenicDir = new THREE.Vector3();
 const INSPECT = /(\?|&)insp/.test(location.search);
 /* ?top=200 从正上方看，用来核对出生点、路面掩码、车流是不是真在马路上 */
 const TOPDOWN = parseFloat((location.search.match(/[?&]top=?(\d*)/) || [])[1] || 0) ||
@@ -2077,13 +2077,18 @@ function updateCamera(dt) {
 
   /* 跟随镜头按场景尺度 S 定位；速度本身已经乘过 S。 */
   const wide = scenicView || introPreview;
-  scene.fog.near += ((wide ? 620 : CFG.fog[0]) - scene.fog.near) * Math.min(1, dt * 3);
-  scene.fog.far += ((wide ? 1450 : CFG.fog[1]) - scene.fog.far) * Math.min(1, dt * 3);
+  scene.fog.near += ((wide ? 120 : CFG.fog[0]) - scene.fog.near) * Math.min(1, dt * 3);
+  scene.fog.far += ((wide ? 4600 : CFG.fog[1]) - scene.fog.far) * Math.min(1, dt * 3);
   if (wide) {
-    camGoal.copy(p).addScaledVector(_cDir, -95 * S).addScaledVector(_cUp, 145 * S);
-    lookGoal.copy(p).addScaledVector(_cDir, 32 * S).addScaledVector(_cUp, -25 * S);
+    // Scenic view is an actual orbital shot: aim at the planet centre and
+    // place the camera far enough out that the complete sphere fits on both
+    // desktop and portrait phone viewports.
+    const scenicDistance = IS_MOBILE ? 2600 : 1800;
+    _scenicDir.copy(_cUp).normalize();
+    camGoal.copy(PLANET.C).addScaledVector(_scenicDir, scenicDistance);
     camera.position.lerp(camGoal, Math.min(1, dt * 2.4));
-    camera.lookAt(lookGoal);
+    camera.up.copy(_cDir);
+    camera.lookAt(PLANET.C);
     return;
   }
   const base = state.onBike ? 9.0 * S + Math.abs(state.speed) * 0.11 : 7.2 * S + foot.speed * 0.2;

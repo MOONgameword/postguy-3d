@@ -65,12 +65,12 @@ export function createGrassCards(texture = null, turf = null) {
       // Roots use the same sampled turf tone; the upper blades rise into the
       // warm yellow-green shown in the reference instead of staying flat green.
       float bladeGradient=smoothstep(.04,.92,grassHeight);
-      vec3 tipColor=mix(vec3(.54,.68,.20),vec3(.88,.88,.48),tone);
+      vec3 tipColor=mix(vec3(.46,.62,.17),vec3(.78,.80,.34),tone);
       diffuseColor.rgb*=mix(groundColor,tipColor,bladeGradient);
       diffuseColor.a*=smoothstep(0.,.12,grassHeight);
     `);
   };
-  material.customProgramCacheKey=()=> `grass-ground-blend-v3-${!!turf}`;
+  material.customProgramCacheKey=()=> `grass-ground-blend-v4-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
@@ -138,7 +138,7 @@ function stemGeometry() {
 export function createMeadowPlants(scene, field, { mobile = false, model = createGrassCards() } = {}) {
   // The visible planet is smaller than this radius; the larger budget keeps
   // grass ready while the camera travels and avoids pop-in at the horizon.
-  const range = mobile ? 2640 : 3600;
+  const range = mobile ? 7920 : 10800;
   const nearRange = mobile ? 240 : 330;
   // Three crossed cards nearby, two in the distant ring; keep existing budgets.
   const capacity = model ? (mobile ? 1620 : 3780) : (mobile ? 28000 : 64000);
@@ -169,7 +169,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
         gl_Position = projectionMatrix * mvPosition;
       `);
     };
-    mat.customProgramCacheKey = () => `meadow-ground-v3-${flower}-${baseKey}`;
+    mat.customProgramCacheKey = () => `meadow-ground-v4-${flower}-${baseKey}`;
     return mat;
   }
   const grassGeometry = model.geometry;

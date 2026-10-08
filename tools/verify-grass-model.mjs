@@ -29,10 +29,10 @@ for(const mobile of [false,true]) {
  assert.ok(shader.fragmentShader.includes('groundColor'));
  assert.ok(!shader.fragmentShader.includes('normal *= faceDirection;'));
  assert.equal(plants.grass.instanceColor,null);assert.equal(plants.grass.material.vertexColors,false);
- assert.equal(plants.stats.range,mobile?2640:3600);
+ assert.equal(plants.stats.range,mobile?7920:10800);
  plants.update(1.5,focus.clone().add(new T.Vector3(8,0,0)));assert.equal(plants.farGrass.count,2);
  assert.ok(plants.grass.count+plants.farGrass.count<=plants.stats.maxGrass);
- plants.update(2,new T.Vector3(0,-5000,0));assert.equal(plants.grass.count+plants.farGrass.count,0);
+ plants.update(2,new T.Vector3(0,-20000,0));assert.equal(plants.grass.count+plants.farGrass.count,0);
 }
 assert.ok(model.farGeometry.attributes.position.count > 0 && model.farGeometry.attributes.position.count < geo.attributes.position.count);
 assert.ok(!fs.readFileSync('game.js','utf8').includes('GRASS_MODEL_URL'));
