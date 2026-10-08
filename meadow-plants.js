@@ -65,12 +65,12 @@ export function createGrassCards(texture = null, turf = null) {
       // Roots use the same sampled turf tone; the upper blades rise into the
       // warm yellow-green shown in the reference instead of staying flat green.
       float bladeGradient=smoothstep(.04,.92,grassHeight);
-      vec3 tipColor=mix(vec3(.16,.32,.020),vec3(.34,.49,.055),tone);
+      vec3 tipColor=mix(vec3(.25,.39,.055),vec3(.48,.61,.13),tone);
       diffuseColor.rgb*=mix(groundColor,tipColor,bladeGradient);
       diffuseColor.a*=smoothstep(0.,.12,grassHeight);
     `);
   };
-  material.customProgramCacheKey=()=> `grass-ground-blend-v5-${!!turf}`;
+  material.customProgramCacheKey=()=> `grass-ground-blend-v6-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 

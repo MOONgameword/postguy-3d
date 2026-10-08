@@ -8,12 +8,13 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261008-07';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261008-08';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-07';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
+import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 
 let meadowPlants = null;
 
@@ -2083,7 +2084,7 @@ function updateCamera(dt) {
     // Scenic view is an actual orbital shot: aim at the planet centre and
     // place the camera far enough out that the complete sphere fits on both
     // desktop and portrait phone viewports.
-    const scenicDistance = IS_MOBILE ? 2600 : 1800;
+    const scenicDistance = overviewDistance(PLANET.R, camera.fov, camera.aspect);
     _scenicDir.copy(_cUp).normalize();
     camGoal.copy(PLANET.C).addScaledVector(_scenicDir, scenicDistance);
     camera.position.lerp(camGoal, Math.min(1, dt * 2.4));
@@ -2171,6 +2172,7 @@ function loop() {
   if (boy.mixer) boy.mixer.update(dt);
   updateTraffic(dt);
   updateCamera(dt);
+  updatePlanetClipping(camera, PLANET.C, PLANET.R);
   if (!introPreview) updateMarkers(dt, time);
 
   const fp = focusPos();
