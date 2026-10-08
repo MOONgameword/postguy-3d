@@ -16,9 +16,10 @@ for(const g of [geo,model.farGeometry]) for(const a of Object.values(g.attribute
 for(const mobile of [false,true]) {
  const turf={base:new T.Texture(),nap:new T.Texture()};
  const focus=new T.Vector3(0,600,0),p2=new T.Vector3(500,400,0);
- const field={stats:{},bins:new Map([['0,12,0',new Float32Array([0,600,0,.4,1])],['10,8,0',new Float32Array([...p2.toArray(),.4,0])]])};
+ const distant=new T.Vector3(0,-550,0);
+ const field={stats:{},bins:new Map([['0,12,0',new Float32Array([0,600,0,.4,1])],['10,8,0',new Float32Array([...p2.toArray(),.4,0])],['0,-12,0',new Float32Array([...distant.toArray(),.4,0])]])};
  const plants=createMeadowPlants(new T.Scene(),field,{mobile,model:createGrassCards(new T.Texture(),turf)});
- plants.update(1,focus);assert.equal(plants.grass.count,1);assert.equal(plants.farGrass.count,1);
+ plants.update(1,focus);assert.equal(plants.grass.count,1);assert.equal(plants.farGrass.count,2);
  assert.equal(plants.blooms.count,1);
  const mat=new T.Matrix4();plants.grass.getMatrixAt(0,mat);
  assert.ok(new T.Vector3().setFromMatrixPosition(mat).distanceTo(focus.clone().add(new T.Vector3(0,-.08,0)))<1e-4);
@@ -28,8 +29,7 @@ for(const mobile of [false,true]) {
  assert.ok(shader.fragmentShader.includes('groundColor'));
  assert.ok(!shader.fragmentShader.includes('normal *= faceDirection;'));
  assert.equal(plants.grass.instanceColor,null);assert.equal(plants.grass.material.vertexColors,false);
- assert.equal(plants.stats.range,mobile?1320:1800);
- const distant=new T.Vector3(0,-550,0);field.bins.set('0,-12,0',new Float32Array([...distant.toArray(),.4,0]));
+ assert.equal(plants.stats.range,mobile?2640:3600);
  plants.update(1.5,focus.clone().add(new T.Vector3(8,0,0)));assert.equal(plants.farGrass.count,2);
  assert.ok(plants.grass.count+plants.farGrass.count<=plants.stats.maxGrass);
  plants.update(2,new T.Vector3(0,-5000,0));assert.equal(plants.grass.count+plants.farGrass.count,0);

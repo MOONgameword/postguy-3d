@@ -62,12 +62,15 @@ export function createGrassCards(texture = null, turf = null) {
       float tone=clamp(.30+lum*1.35+rolling*.22,0.,1.);
       float grain=texture2D(turfNap,sp.yz).r*w.x+texture2D(turfNap,sp.xz).r*w.y+texture2D(turfNap,sp.xy).r*w.z;
       vec3 groundColor=mix(vec3(.09,.20,.040),vec3(.34,.52,.105),tone)*(.48+1.05*grain);
-      float tip=smoothstep(.18,1.,grassHeight);
-      diffuseColor.rgb*=mix(groundColor,groundColor*1.16+vec3(.022,.026,.008),tip);
-      diffuseColor.a*=smoothstep(0.,.14,grassHeight);
+      // Roots use the same sampled turf tone; the upper blades rise into the
+      // warm yellow-green shown in the reference instead of staying flat green.
+      float bladeGradient=smoothstep(.04,.92,grassHeight);
+      vec3 tipColor=mix(vec3(.54,.68,.20),vec3(.88,.88,.48),tone);
+      diffuseColor.rgb*=mix(groundColor,tipColor,bladeGradient);
+      diffuseColor.a*=smoothstep(0.,.12,grassHeight);
     `);
   };
-  material.customProgramCacheKey=()=> `grass-ground-blend-v2-${!!turf}`;
+  material.customProgramCacheKey=()=> `grass-ground-blend-v3-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
@@ -108,7 +111,12 @@ export function scatterMeadow(planet, allowed = () => true) {
     }
   }
   for (const [k, values] of bins) bins.set(k, new Float32Array(values));
-  return { bins, stats: { roots: count, flowers, cells: bins.size } };
+  const cellRecords = [];
+  for (const [cellKey, data] of bins) {
+    const [x,y,z] = cellKey.split(',').map(Number);
+    cellRecords.push({ data, center: new T.Vector3((x + .5) * CELL, (y + .5) * CELL, (z + .5) * CELL) });
+  }
+  return { bins, cellRecords, stats: { roots: count, flowers, cells: bins.size } };
 }
 
 function stemGeometry() {
@@ -128,7 +136,9 @@ function stemGeometry() {
 }
 
 export function createMeadowPlants(scene, field, { mobile = false, model = createGrassCards() } = {}) {
-  const range = mobile ? 1320 : 1800;
+  // The visible planet is smaller than this radius; the larger budget keeps
+  // grass ready while the camera travels and avoids pop-in at the horizon.
+  const range = mobile ? 2640 : 3600;
   const nearRange = mobile ? 240 : 330;
   // Three crossed cards nearby, two in the distant ring; keep existing budgets.
   const capacity = model ? (mobile ? 1620 : 3780) : (mobile ? 28000 : 64000);
@@ -159,7 +169,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
         gl_Position = projectionMatrix * mvPosition;
       `);
     };
-    mat.customProgramCacheKey = () => `meadow-ground-v2-${flower}-${baseKey}`;
+    mat.customProgramCacheKey = () => `meadow-ground-v3-${flower}-${baseKey}`;
     return mat;
   }
   const grassGeometry = model.geometry;
@@ -175,6 +185,11 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
     mesh.instanceMatrix.setUsage(T.DynamicDrawUsage); scene.add(mesh);
   }
   const last = new T.Vector3(Infinity, 0, 0), p = new T.Vector3(), up = new T.Vector3(), scale = new T.Vector3();
+  const cellRecords = field.cellRecords || [...field.bins].map(([cellKey, data]) => {
+    const [x,y,z] = cellKey.split(',').map(Number);
+    return { data, center: new T.Vector3((x + .5) * CELL, (y + .5) * CELL, (z + .5) * CELL) };
+  });
+  const cellDistance = new Float32Array(cellRecords.length);
   const q = new T.Quaternion(), yaw = new T.Quaternion(), axis = new T.Vector3(0, 1, 0), matrix = new T.Matrix4();
   const colors = ['#f3ce55', '#ead9b3'].map(c => new T.Color(c));
 
@@ -184,15 +199,15 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
     last.copy(focus); let gi = 0, fgi = 0, fi = 0;
     // Visit occupied bins only, rather than millions of empty cube cells.
     const cells=[];
-    for(const [cellKey,data] of field.bins) {
-      const [x,y,z]=cellKey.split(',').map(Number);
-      const distance=p.set((x+.5)*CELL,(y+.5)*CELL,(z+.5)*CELL).distanceToSquared(focus);
-      if(distance>(range+CELL)* (range+CELL)) continue;
-      cells.push({data,distance});
+    for(let ci=0; ci<cellRecords.length; ci++) {
+      const record=cellRecords[ci];
+      const distance=cellDistance[ci]=record.center.distanceToSquared(focus);
+      if(distance <= (range + CELL) * (range + CELL)) cells.push({data:record.data,distance,ci});
     }
-    const farCells=cells.filter(c=>c.distance>(nearRange-CELL)**2).length;
-    const farQuota=Math.max(1,Math.floor(farCapacity/Math.max(1,farCells)));
+    // Sorting occupied cells is cheaper than walking the old cubic grid and
+    // lets the nearest cells fill first without string parsing per update.
     cells.sort((a, b) => a.distance - b.distance);
+    const farQuota=Math.max(1,Math.floor(farCapacity/Math.max(1,cells.length)));
     roots: for (const { data } of cells) for (let i = 0; i < data.length; i += 5) {
       p.fromArray(data, i); const distanceSq = p.distanceToSquared(focus); if (distanceSq > range * range) continue;
       const seed = data[i + 3], flower = data[i + 4] > 0;
@@ -201,7 +216,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
       if(distanceSq<=nearRange*nearRange ? gi>=capacity : !farGrass || fgi>=farCapacity) continue;
       // Evenly distribute far cards across bins; never exhaust the pool in
       // the first few cells and leave the expanded distance empty.
-      if(distanceSq>nearRange*nearRange && Math.floor(i/5)%Math.max(1,Math.ceil(data.length/5/farQuota))!==0) continue;
+      if(distanceSq>nearRange*nearRange && Math.floor(i/5)%Math.max(1,Math.ceil(data.length/5/Math.max(1,farQuota)))!==0) continue;
       up.copy(p).normalize(); q.setFromUnitVectors(axis, up).multiply(yaw.setFromAxisAngle(axis, seed * Math.PI * 2));
       const size = .68 + seed * .55;
       // Sink roots slightly so no sliver appears between blades and sloping land.
