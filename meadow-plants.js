@@ -239,5 +239,10 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
     if (farGrass?.instanceColor) farGrass.instanceColor.needsUpdate = true;
     if (blooms.instanceColor) blooms.instanceColor.needsUpdate = true;
   }
-  return { update, grass, farGrass, stems, blooms, stats: { ...field.stats, maxGrass: capacity + farCapacity, nearRange, range, drawCalls: farGrass ? 4 : 3 } };
+  function setVisible(visible) {
+    grass.visible = visible;
+    if (farGrass) farGrass.visible = visible;
+    stems.visible = visible; blooms.visible = visible;
+  }
+  return { update, setVisible, grass, farGrass, stems, blooms, stats: { ...field.stats, maxGrass: capacity + farCapacity, nearRange, range, drawCalls: farGrass ? 4 : 3 } };
 }
