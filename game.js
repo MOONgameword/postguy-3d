@@ -8,9 +8,9 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261008-06';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261008-07';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-06';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-07';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
@@ -2184,8 +2184,10 @@ function loop() {
   atmosphere.update(camera, fp, _lpU, _lpE, _lpN);
   updateSeeds(time, fp, _lpU, _lpE, _lpN);
   lakeside?.update(time);
-  meadowPlants?.setVisible(!scenicView);
-  meadowPlants?.update(time, fp);
+  if (meadowPlants) {
+    meadowPlants.setVisible(!scenicView);
+    if (!scenicView) meadowPlants.update(time, fp);
+  }
   for (const c of clouds) {
     c.u += c.spd * dt;
     if (c.u > 300) c.u -= 600;
@@ -2334,6 +2336,7 @@ async function boot() {
   setProgress(0.64, '铺设半透明插片草…');
   const grassAsset = createGrassCards(await loadTex(GRASS_TEXTURE_URL), surfaces.grassAppearance);
   meadowPlants = createMeadowPlants(scene, meadowField, { mobile: IS_MOBILE, model: grassAsset });
+  meadowPlants.setVisible(!scenicView);
   if (DEBUG) console.info('Meadow plants:', meadowPlants.stats);
   buildMiniImage();
   await new Promise(r => setTimeout(r, 16));

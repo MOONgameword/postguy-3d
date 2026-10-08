@@ -29,6 +29,7 @@ for(const mobile of [false,true]) {
  assert.ok(shader.fragmentShader.includes('groundColor'));
  assert.ok(!shader.fragmentShader.includes('normal *= faceDirection;'));
  assert.equal(plants.grass.instanceColor,null);assert.equal(plants.grass.material.vertexColors,false);
+ plants.setVisible(false);assert.equal(plants.grass.visible,false);assert.equal(plants.farGrass.visible,false);plants.setVisible(true);assert.equal(plants.grass.visible,true);
  assert.equal(plants.stats.range,mobile?7920:10800);
  plants.update(1.5,focus.clone().add(new T.Vector3(8,0,0)));assert.equal(plants.farGrass.count,2);
  assert.ok(plants.grass.count+plants.farGrass.count<=plants.stats.maxGrass);
