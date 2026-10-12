@@ -15,6 +15,7 @@ import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
+import { addCharacterOutline } from './character-outline.js?v=20261012-01';
 
 let meadowPlants = null;
 
@@ -2370,6 +2371,7 @@ async function boot() {
   setProgress(0.85, '加载小熊猫与骨骼动作…');
   const boyRoot = await withRetry(PANDA_URL, async () => loadPanda(await fetchAsset(PANDA_URL)));
   normalize(boyRoot, { height: CFG.riderHeight });
+  addCharacterOutline(boyRoot, CFG.riderHeight * .0032);
 
   boy.pivot = new THREE.Group();
   boy.pivot.add(boyRoot);

@@ -1,0 +1,24 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>小熊猫卡通描边检查</title>
+<style>body{margin:0;background:#343638;color:#f4eedc;font:14px sans-serif}nav{position:fixed;top:12px;left:12px;z-index:2}button,select{padding:8px;margin:4px}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+<nav><label>动作 <select id="action"><option>idle</option><option>sit</option><option>walk</option><option>run</option><option>swim</option><option>jump</option></select></label><button id="ink">描边：开</button><button id="angle">转到侧面</button><span id="status">加载中</span></nav>
+<script type="module">
+import * as T from 'three';
+import {loadPanda} from './panda-character.js?v=20260930-28';
+import {addCharacterOutline} from './character-outline.js?v=20261012-01';
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);document.body.append(renderer.domElement);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+const scene=new T.Scene();scene.background=new T.Color('#343638');scene.add(new T.HemisphereLight(0xb9c9c5,0x969b7d,1.35),new T.AmbientLight(0xe4dfcc,.55));
+const sun=new T.DirectionalLight(0xfff8e6,1.3);sun.position.set(3,6,4);scene.add(sun);
+const root=await loadPanda();scene.add(root);root.updateMatrixWorld(true);
+const bounds=new T.Box3().setFromObject(root),height=bounds.max.y-bounds.min.y;
+addCharacterOutline(root,height*.0032);
+const target=bounds.getCenter(new T.Vector3());const camera=new T.PerspectiveCamera(36,innerWidth/innerHeight,.01,50);
+const mixer=new T.AnimationMixer(root);let current;
+function play(){current?.stop();current=mixer.clipAction(root.animations.find(c=>c.name===document.querySelector('#action').value));current.play();}
+document.querySelector('#action').onchange=play;play();
+let ink=true,side=false;
+document.querySelector('#ink').onclick=()=>{ink=!ink;root.traverse(o=>{if(o.userData.__outline)o.visible=ink});document.querySelector('#ink').textContent='描边：'+(ink?'开':'关')};
+document.querySelector('#angle').onclick=()=>{side=!side};
+document.querySelector('#status').textContent='细深棕轮廓 · 共用角色骨骼';
+const clock=new T.Clock();renderer.setAnimationLoop(()=>{mixer.update(Math.min(clock.getDelta(),.05));renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const d=height*1.95/Math.min(1,camera.aspect);camera.position.copy(target).add(new T.Vector3(side?d:d*.1,height*.05,side?d*.25:d));camera.lookAt(target);renderer.render(scene,camera)});
+</script></html>
