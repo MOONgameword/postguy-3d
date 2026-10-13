@@ -10,6 +10,7 @@ import { buildRoundedJunctions } from '../rounded-junctions.js';
 import { createLakeside, lakePoint, isLakeWater } from '../lakeside.js';
 import { reduceSceneDensity } from '../scene-density.js';
 import { raiseGrassLevel } from '../grass-level.js';
+import { installBuildingRoadLayout } from '../building-road-layout.js';
 import { installJunctionFurniture } from '../road-geometry.js';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -77,9 +78,11 @@ let cases=0;
 }
 const {city,road,center}=loadCity();
 const plan=buildRoundedJunctions(road);
-installJunctionFurniture(city,JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v2.json',import.meta.url))));
+installJunctionFurniture(city,JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v3.json',import.meta.url))));
 installTestTerrain(city);createLakeside(city);
 reduceSceneDensity(city);
+installBuildingRoadLayout(city,JSON.parse(fs.readFileSync('assets/building-road-layout-v1.json')));
+installBuildingRoadLayout(city,JSON.parse(fs.readFileSync('assets/roadside-props-v1.json')));
 raiseGrassLevel(city);
 replaceStylizedTrees(city,{trunkAsset:await loadTestTrunk()});
 roundSceneRocks(city);
@@ -100,7 +103,7 @@ for(const c of plan.corridors){
   assert.ok(new T.Vector3(0,1,0).applyQuaternion(out).distanceTo(end)<1e-6);
   traversedCorridors++;
 }
-for(const j of plan.junctions)for(const sector of j.sectors)for(const v of plan.sectorPath(sector,20)){
+for(const j of plan.junctions)for(const sector of j.sectors)for(const v of plan.sectorPath(sector,sector.a.half/2,sector.b.half/2)){
   const p=plan.world(j,v,602).sub(center).normalize();
   assert.deepEqual(world.explain(p,2.1),[],'Rounded turn must stay passable');turnSamples++;
 }

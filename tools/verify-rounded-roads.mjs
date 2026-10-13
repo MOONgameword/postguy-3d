@@ -8,21 +8,14 @@ import { decodeRoadGeometry, installJunctionFurniture } from '../road-geometry.j
 const { city, road } = loadCity();
 const plan = buildRoundedJunctions(road);
 assert.deepEqual([plan.stats.junctions, plan.stats.corners, plan.stats.corridors], [10, 30, 15]);
-const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v6.bin', import.meta.url));
+const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v7.bin', import.meta.url));
 const geometry = decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 const positions = geometry.attributes.position, normals = geometry.attributes.normal;
-const oldBytes = fs.readFileSync(new URL('../assets/roads-rounded-v2.bin', import.meta.url));
-const oldGeometry = decodeRoadGeometry(oldBytes.buffer.slice(oldBytes.byteOffset, oldBytes.byteOffset + oldBytes.byteLength));
-const sidewalkGroup = geometry.groups.find(g => road.material[g.materialIndex].name === 'City_Sidewalk');
-const oldSidewalkGroup = oldGeometry.groups.find(g => road.material[g.materialIndex].name === 'City_Sidewalk');
-assert.equal(sidewalkGroup.count, oldSidewalkGroup.count);
-let heightChecks = 0;
-for (let i = sidewalkGroup.start; i < sidewalkGroup.start + sidewalkGroup.count; i++) {
-  const before = new THREE.Vector3().fromBufferAttribute(oldGeometry.attributes.position, i - sidewalkGroup.start + oldSidewalkGroup.start).applyMatrix4(road.matrixWorld);
-  const after = new THREE.Vector3().fromBufferAttribute(positions, i).applyMatrix4(road.matrixWorld);
-  assert.ok(Math.abs((after.length() - 602) - (before.length() - 602) / 3) < .0002, 'Sidewalk height must be one third above asphalt');
-  assert.ok(before.normalize().distanceTo(after.normalize()) < 1e-6, 'Sidewalk footprint must not change');
-  heightChecks++;
+const sidewalkGroup=geometry.groups.find(g=>road.material[g.materialIndex].name==='City_Sidewalk');
+let heightChecks=0;
+for(let i=sidewalkGroup.start;i<sidewalkGroup.start+sidewalkGroup.count;i++) {
+ const p=new THREE.Vector3().fromBufferAttribute(positions,i).applyMatrix4(road.matrixWorld);
+ assert.ok(Math.abs(p.length()-(602+2.6/3))<.0002);heightChecks++;
 }
 let reversed = 0, invalid = 0, checkedFaces = 0;
 for (let i = 0; i < positions.count; i += 3) {
@@ -76,27 +69,27 @@ function assertGround(p, mesh, label) {
 }
 // Follow every rounded corner through its full sweep, including reflex bends.
 for (const [ji, junction] of plan.junctions.entries()) for (const [si, sector] of junction.sectors.entries()) {
-  for (const p of plan.sectorPath(sector, 64.3).slice(1, -1)) {
+  for (const p of plan.sectorPath(sector, sector.a.outer-.7, sector.b.outer-.7).slice(1, -1)) {
     const height = assertGround(plan.world(junction, p, 602 + 2.6 / 3 + .02), curb, 'Grass-side curb cap');
     assert.ok(height > 602.8 && height < 602.9, 'Grass curb must stay at sidewalk height');
     grassCurbChecks++;
   }
   // The cap must cover the new narrow edge, leaving the old broad strip paved.
-  const narrow = plan.sectorPath(sector, 35.7), paved = plan.sectorPath(sector, 39);
+  const narrow = plan.sectorPath(sector, sector.a.half+.7, sector.b.half+.7), paved = plan.sectorPath(sector, sector.a.half+4, sector.b.half+4);
   for (let k = 1; k < narrow.length - 1; k++) {
     assertGround(plan.world(junction, narrow[k], (602 + 2.6 / 3 + .02)), curb, 'Narrow curb continuity');
     ray.set(origin, plan.world(junction, paved[k], (602 + 2.6 / 3 + .02)).normalize());
     assert.equal(ray.intersectObject(curb, false).length, 0, 'Old wide cap must be removed');
   }
-  for (const [pi, p] of plan.sectorPath(sector, 20).entries()) { assertGround(plan.world(junction, p, 602), asphalt, `J${ji} turn ${si} sample ${pi} (${p.x},${p.y})`); roadChecks++; }
-  for (const p of plan.sectorPath(sector, 53)) { assertGround(plan.world(junction, p, (602 + 2.6 / 3)), sidewalk, `J${ji} sidewalk ${si}`); walkChecks++; }
+  for (const [pi, p] of plan.sectorPath(sector, sector.a.half*.5, sector.b.half*.5).entries()) { assertGround(plan.world(junction, p, 602), asphalt, `J${ji} turn ${si} sample ${pi} (${p.x},${p.y})`); roadChecks++; }
+  for (const p of plan.sectorPath(sector, sector.a.half+18, sector.b.half+18)) { assertGround(plan.world(junction, p, (602 + 2.6 / 3)), sidewalk, `J${ji} sidewalk ${si}`); walkChecks++; }
 }
 for (const corridor of plan.corridors) for (let k = 0; k <= 20; k++) {
   const s = corridor.start + (corridor.end - corridor.start) * k / 20;
   const p = corridor.j.up.clone().multiplyScalar(Math.cos(s)).addScaledVector(corridor.arm.direction, Math.sin(s)).multiplyScalar(602);
   assertGround(p, asphalt, 'Corridor continuity'); roadChecks++;
   if (k > 0 && k < 20) for (const sign of [-1, 1]) {
-    const edge = p.clone().multiplyScalar(600 / 602).addScaledVector(corridor.side, sign * 64.3);
+    const edge = p.clone().multiplyScalar(600 / 602).addScaledVector(corridor.side, sign * (corridor.arm.outer-.7));
     const height = assertGround(edge, curb, 'Straight grass-side curb cap');
     assert.ok(height > 602.8 && height < 602.9);
     grassCurbChecks++;
@@ -112,7 +105,7 @@ for (let i = paint.start; i < paint.start + paint.count; i += 3 * stride) {
   minGap = Math.min(minGap, gap); maxGap = Math.max(maxGap, gap);
 }
 assert.ok(minGap > 0.010 && maxGap < 0.015, `Paint clearance ${minGap}–${maxGap}`);
-const placements = JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v2.json', import.meta.url)));
+const placements = JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v3.json', import.meta.url)));
 installJunctionFurniture(city, placements);
 assert.equal(placements.length, 336, 'All street furniture follows the lowered sidewalk');
 for (const placement of placements) {

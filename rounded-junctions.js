@@ -3,7 +3,10 @@ import { tessellateJunction } from './junction-tessellation.js';
 
 const BASE = 600, ROAD = 602, ORIGINAL_WALK = 604.6;
 const WALK = ROAD + (ORIGINAL_WALK - ROAD) / 3;
-const HALF = 35, OUTER = 65, CURB = 36.4;
+// The source FBX uses a wide four-lane strip everywhere.  Keep one continuous
+// arterial at that width, and make every other corridor a compact two-lane road.
+const MAIN_HALF = 35, SIDE_HALF = 18, SIDEWALK = 30;
+const CURB_GAP = 1.4;
 const TAU = Math.PI * 2;
 const v2 = (x = 0, y = 0) => new THREE.Vector2(x, y);
 const left = d => v2(-d.y, d.x);
@@ -83,43 +86,52 @@ export function buildRoundedJunctions(mesh) {
     arm.d = v2(arm.direction.dot(j.x), arm.direction.dot(j.y)).normalize();
     arm.angle = Math.atan2(arm.d.y, arm.d.x);
   }
+  // One continuous arterial through the residential centre. Its internal
+  // junctions follow the straightest continuation, without branches or loops.
+  const mainPath = [4, 0, 3, 5, 9];
+  const edgeKey = (a,b) => [junctions.indexOf(a),junctions.indexOf(b)].sort((a,b)=>a-b).join(':');
+  const mainEdges = new Set();
+  for (let i = 1; i < mainPath.length; i++) mainEdges.add(edgeKey(junctions[mainPath[i - 1]], junctions[mainPath[i]]));
+  for (const j of junctions) for (const arm of j.arms) {
+    arm.half = mainEdges.has(edgeKey(j, arm.destination)) ? MAIN_HALF : SIDE_HALF;
+    arm.outer = arm.half + SIDEWALK;
+  }
   for (const j of junctions) {
     j.arms.sort((a, b) => a.angle - b.angle);
-    for (let i = 0; i < j.arms.length; i++) {
-      const a = j.arms[i], b = j.arms[(i + 1) % j.arms.length];
-      const gap = (b.angle - a.angle + TAU) % TAU;
-      const sign = gap < Math.PI ? 1 : -1;
-      // A 50-unit road radius leaves a 20-unit radius at the outer sidewalk edge.
-      // Reflex sectors form the outside of a bend and use the concentric radius.
-      const h = sign * (HALF + 50);
-      const t = h / Math.tan(gap / 2);
-      const bisector = v2(Math.cos(a.angle + gap / 2), Math.sin(a.angle + gap / 2));
-      const center = bisector.multiplyScalar(h / Math.sin(gap / 2));
-      a.cut = Math.max(a.cut, t + 16); b.cut = Math.max(b.cut, t + 16);
-      j.sectors.push({ a, b, gap, sweep: gap - Math.PI, h, t, center });
+    for (let i=0;i<j.arms.length;i++) {
+      const a=j.arms[i], b=j.arms[(i+1)%j.arms.length];
+      const gap=(b.angle-a.angle+TAU)%TAU;
+      // Solve a circular fillet tangent to both edges, including unequal widths.
+      const radius=gap<Math.PI?50:-100;
+      const na=left(a.d), nb=left(b.d).negate();
+      const ha=a.half+radius, hb=b.half+radius;
+      const det=na.x*nb.y-na.y*nb.x;
+      const center=v2((ha*nb.y-na.y*hb)/det,(na.x*hb-ha*nb.x)/det);
+      const ta=center.dot(a.d),tb=center.dot(b.d);
+      a.cut=Math.max(a.cut,ta+16); b.cut=Math.max(b.cut,tb+16);
+      j.sectors.push({a,b,gap,sweep:gap-Math.PI,ta,tb,center,radius});
     }
   }
   const world = (j, p, radius) => j.up.clone().multiplyScalar(BASE)
     .addScaledVector(j.x, p.x).addScaledVector(j.y, p.y).normalize().multiplyScalar(radius);
   const mouth = (arm, width) => arm.d.clone().multiplyScalar(arm.cut)
     .addScaledVector(left(arm.d), width * Math.sqrt(1 + (arm.cut / BASE) ** 2));
-  function sectorPath(sector, width) {
-    const { a, b, t, center, h, sweep } = sector;
-    const start = mouth(a, width), end = mouth(b, -width);
-    const ta = a.d.clone().multiplyScalar(t).addScaledVector(left(a.d), width);
-    const tb = b.d.clone().multiplyScalar(t).addScaledVector(left(b.d), -width);
-    // Identical sample counts across all widths keep road, curb and paint aligned.
-    const nA = Math.max(1, Math.ceil((a.cut - t) / 5));
-    const nB = Math.max(1, Math.ceil((b.cut - t) / 5));
-    const nArc = Math.max(4, Math.ceil(Math.abs(sweep) * Math.max(Math.abs(h - 28), Math.abs(h - OUTER)) / 4));
-    const points = [];
-    for (let k = 0; k < nA; k++) points.push(start.clone().lerp(ta, k / nA));
-    const r = ta.clone().sub(center);
-    for (let k = 0; k <= nArc; k++) {
-      const angle = sweep * k / nArc, c = Math.cos(angle), s = Math.sin(angle);
-      points.push(v2(center.x + r.x * c - r.y * s, center.y + r.x * s + r.y * c));
+  function sectorPath(sector, widthA, widthB = widthA) {
+    const {a,b,ta:tA,tb:tB,center,sweep,radius}=sector;
+    const start=mouth(a,widthA),end=mouth(b,-widthB);
+    const ta=a.d.clone().multiplyScalar(tA).addScaledVector(left(a.d),widthA);
+    const tb=b.d.clone().multiplyScalar(tB).addScaledVector(left(b.d),-widthB);
+    const nA=Math.max(1,Math.ceil((a.cut-tA)/5)),nB=Math.max(1,Math.ceil((b.cut-tB)/5));
+    const nArc=Math.max(4,Math.ceil(Math.abs(sweep)*(Math.abs(radius)+SIDEWALK)/4));
+    const points=[];
+    for(let k=0;k<nA;k++) points.push(start.clone().lerp(ta,k/nA));
+    const r=ta.clone().sub(center),endRadius=tb.distanceTo(center);
+    for(let k=0;k<=nArc;k++) {
+      const f=k/nArc,angle=sweep*f,c=Math.cos(angle),s=Math.sin(angle);
+      const scale=THREE.MathUtils.lerp(r.length(),endRadius,f)/r.length();
+      points.push(v2(center.x+(r.x*c-r.y*s)*scale,center.y+(r.x*s+r.y*c)*scale));
     }
-    for (let k = 1; k <= nB; k++) points.push(tb.clone().lerp(end, k / nB));
+    for(let k=1;k<=nB;k++) points.push(tb.clone().lerp(end,k/nB));
     return points;
   }
   const buffers = mats.map(() => ({ position: [], normal: [], uv: [] }));
@@ -169,16 +181,20 @@ export function buildRoundedJunctions(mesh) {
   for (const j of junctions) {
     const outline = [];
     for (const sector of j.sectors) {
-      const front = sectorPath(sector, HALF), curb = sectorPath(sector, CURB), back = sectorPath(sector, OUTER);
+      const front = sectorPath(sector, sector.a.half, sector.b.half);
+      const curbPath = sectorPath(sector, sector.a.half + CURB_GAP, sector.b.half + CURB_GAP);
+      const back = sectorPath(sector, sector.a.outer, sector.b.outer);
       outline.push(...front);
-      // Match all seven 10-unit strips at the adjoining corridor mouth.
-      for (let width = -HALF + 10; width < HALF; width += 10) outline.push(mouth(sector.b, width));
+      // Symmetric cross-sections match at both ends of each corridor.
+      const strips=Math.ceil(2*sector.b.half/10);
+      for(let k=1;k<strips;k++) outline.push(mouth(sector.b,-sector.b.half+2*sector.b.half*k/strips));
       ribbon(j, front, back, WALK, WALK, walkIndex);
       ribbon(j, front, front, ROAD, WALK, curbIndex);
-      ribbon(j, front, curb, WALK + 0.02, WALK + 0.02, curbIndex);
+      ribbon(j, front, curbPath, WALK + 0.02, WALK + 0.02, curbIndex);
       ribbon(j, back, back, WALK, 600, curbIndex);
-      ribbon(j, back, sectorPath(sector, OUTER - (CURB - HALF)), WALK + .02, WALK + .02, curbIndex);
-      ribbon(j, sectorPath(sector, 28.3), sectorPath(sector, 30.7), ROAD + 0.02, ROAD + 0.02, lineIndex);
+      ribbon(j, back, sectorPath(sector, sector.a.outer - CURB_GAP, sector.b.outer - CURB_GAP), WALK + .02, WALK + .02, curbIndex);
+      ribbon(j,sectorPath(sector,sector.a.half-3.7,sector.b.half-3.7),
+        sectorPath(sector,sector.a.half-2.3,sector.b.half-2.3),ROAD+.02,ROAD+.02,lineIndex);
     }
     // Earcut also handles the outside of two-arm bends where the origin need not
     // lie inside the drivable polygon. A fan at the origin would create overlaps.
@@ -203,82 +219,67 @@ export function buildRoundedJunctions(mesh) {
       return j.up.clone().multiplyScalar(Math.cos(s) * BASE)
         .addScaledVector(arm.direction, Math.sin(s) * BASE).addScaledVector(side, width).normalize().multiplyScalar(radius);
     }
+    const half = arm.half, outer = arm.outer;
     const crossings=[];
     // Put one crossing at every mouth of a true intersection. Two-arm bends
     // stay unmarked. Use the same great-circle coordinates as the asphalt.
-    if(j.arms.length>=3)crossings.push({junction:ji,from:start+4/BASE,to:start+20/BASE});
-    if(other.arms.length>=3)crossings.push({junction:oi,from:end-20/BASE,to:end-4/BASE});
+    if(j.arms.length>=3)crossings.push({junction:ji,from:start+4/BASE,to:start+20/BASE,width:half});
+    if(other.arms.length>=3)crossings.push({junction:oi,from:end-20/BASE,to:end-4/BASE,width:reverse.half});
     if(crossings.length===2&&crossings[0].to+4/BASE>crossings[1].from)throw new Error('Crosswalks overlap');
     for(const crossing of crossings){
       if(crossing.from<start||crossing.to>end)throw new Error('Crosswalk exceeds road corridor');
-      for(let stripe=0;stripe<9;stripe++){
-        const w=-26+stripe*6.1;
+      const stripes = half <= SIDE_HALF + 0.1 ? 6 : 9;
+      const step = (2 * crossing.width - 10) / stripes, stripeWidth = step * 0.52;
+      for(let stripe=0;stripe<stripes;stripe++){
+        const w = -crossing.width + 5 + stripe * step;
         quad(lineIndex,at(crossing.from,w,ROAD),at(crossing.to,w,ROAD),
-          at(crossing.to,w+3.2,ROAD),at(crossing.from,w+3.2,ROAD));
+          at(crossing.to,w+stripeWidth,ROAD),at(crossing.from,w+stripeWidth,ROAD));
       }
-      crosswalks.push({...crossing,corridor:corridors.length,stripes:9,
+      crosswalks.push({...crossing,corridor:corridors.length,stripes,
         position:at((crossing.from+crossing.to)/2,0,ROAD).toArray()});
     }
     const count = Math.ceil((end - start) * BASE / 8);
     const curbRepeats = Math.max(1, Math.round((end - start) * WALK / 4));
     for (let k = 0; k < count; k++) {
       const a = start + (end - start) * k / count, b = start + (end - start) * (k + 1) / count;
-      for (let w = -HALF; w < HALF; w += 10) quad(roadIndex, at(a, w, ROAD), at(b, w, ROAD), at(b, w + 10, ROAD), at(a, w + 10, ROAD));
+      const strips=Math.ceil(2*half/10);
+      for(let k=0;k<strips;k++) {
+        const w=-half+2*half*k/strips,next=-half+2*half*(k+1)/strips;
+        quad(roadIndex,at(a,w,ROAD),at(b,w,ROAD),at(b,next,ROAD),at(a,next,ROAD));
+      }
       for (const sign of [-1, 1]) {
-        quad(walkIndex, at(a, sign * HALF, WALK), at(b, sign * HALF, WALK), at(b, sign * OUTER, WALK), at(a, sign * OUTER, WALK));
+        quad(walkIndex, at(a, sign * half, WALK), at(b, sign * half, WALK), at(b, sign * outer, WALK), at(a, sign * outer, WALK));
         const u0 = k / count * curbRepeats, u1 = (k + 1) / count * curbRepeats;
-        quad(curbIndex, at(a, sign * HALF, ROAD), at(b, sign * HALF, ROAD), at(b, sign * HALF, WALK), at(a, sign * HALF, WALK), u0, u1);
-        quad(curbIndex, at(a, sign * HALF, WALK + .02), at(b, sign * HALF, WALK + .02), at(b, sign * CURB, WALK + .02), at(a, sign * CURB, WALK + .02), u0, u1);
-        quad(curbIndex, at(a, sign * OUTER, WALK), at(b, sign * OUTER, WALK), at(b, sign * OUTER, 600), at(a, sign * OUTER, 600), u0, u1);
-        const innerEdge = sign * (OUTER - (CURB - HALF));
-        quad(curbIndex, at(a, sign * OUTER, WALK + .02), at(b, sign * OUTER, WALK + .02), at(b, innerEdge, WALK + .02), at(a, innerEdge, WALK + .02), u0, u1);
+        quad(curbIndex, at(a, sign * half, ROAD), at(b, sign * half, ROAD), at(b, sign * half, WALK), at(a, sign * half, WALK), u0, u1);
+        quad(curbIndex, at(a, sign * half, WALK + .02), at(b, sign * half, WALK + .02), at(b, sign * (half + CURB_GAP), WALK + .02), at(a, sign * (half + CURB_GAP), WALK + .02), u0, u1);
+        quad(curbIndex, at(a, sign * outer, WALK), at(b, sign * outer, WALK), at(b, sign * outer, 600), at(a, sign * outer, 600), u0, u1);
+        const innerEdge = sign * (outer - CURB_GAP);
+        quad(curbIndex, at(a, sign * outer, WALK + .02), at(b, sign * outer, WALK + .02), at(b, innerEdge, WALK + .02), at(a, innerEdge, WALK + .02), u0, u1);
       }
     }
     corridors.push({ j, other, arm, reverse, start, end, side, crossings, at });
   }
-  // Retain the original lane stripe layout outside each rebuilt intersection.
-  function clip(poly, plane) {
-    const out = [];
-    for (let i = 0; i < poly.length; i++) {
-      const a = poly[i], b = poly[(i + 1) % poly.length], da = a.dot(plane), db = b.dot(plane);
-      if (da >= 0) out.push(a);
-      if ((da >= 0) !== (db >= 0)) out.push(a.clone().lerp(b, da / (da - db)));
-    }
-    return out;
-  }
-  for (const group of source.groups) {
-    if (group.materialIndex !== lineIndex) continue;
-    for (let i = group.start; i < group.start + group.count; i += 3) {
-      const points = [read(i), read(i + 1), read(i + 2)], centroid = points[0].clone().add(points[1]).add(points[2]).normalize();
-      for (const road of corridors) {
-        if (Math.abs(centroid.dot(road.side)) > 0.07) continue;
-        const along = Math.atan2(centroid.dot(road.arm.direction), centroid.dot(road.j.up));
-        const full = Math.acos(road.j.up.dot(road.other.up));
-        if (along < -0.03 || along > full + 0.03) continue;
-        const pa = road.arm.direction.clone().addScaledVector(road.j.up, -road.arm.cut / BASE);
-        const pb = road.reverse.direction.clone().addScaledVector(road.other.up, -road.reverse.cut / BASE);
-        let pieces = [clip(clip(points, pa), pb)];
-        // Interrupt old lane dashes through crossings. Keep the edge lines
-        // outside the 56-unit pedestrian band and avoid paint-on-paint overlap.
-        for(const crossing of road.crossings){
-          const alongPlane=s=>road.arm.direction.clone().multiplyScalar(Math.cos(s)).addScaledVector(road.j.up,-Math.sin(s));
-          const mid=(crossing.from+crossing.to)/2;
-          const forward=road.j.up.clone().multiplyScalar(Math.cos(mid)).addScaledVector(road.arm.direction,Math.sin(mid));
-          const planes=[alongPlane(crossing.from-1/BASE),alongPlane(crossing.to+1/BASE).negate(),
-            road.side.clone().addScaledVector(forward,28/BASE),road.side.clone().negate().addScaledVector(forward,28/BASE)];
-          const outside=[];
-          for(let piece of pieces){
-            for(const plane of planes){
-              const fragment=clip(piece,plane.clone().negate());
-              if(fragment.length>=3)outside.push(fragment);
-              piece=clip(piece,plane);if(piece.length<3)break;
-            }
-          }
-          pieces=outside;
-        }
-        for(const poly of pieces)for (let k = 1; k < poly.length - 1; k++) triangle(lineIndex, poly[0], poly[k], poly[k + 1]);
-        break;
+  // Generate dividers from lane counts instead of retaining old four-lane paint.
+  for(const c of corridors) {
+    const paint=(from,to,w,width)=>{
+      const steps=Math.max(1,Math.ceil((to-from)*BASE/6));
+      for(let k=0;k<steps;k++) {
+        const a=from+(to-from)*k/steps,b=from+(to-from)*(k+1)/steps;
+        quad(lineIndex,c.at(a,w-width/2,ROAD),c.at(b,w-width/2,ROAD),
+          c.at(b,w+width/2,ROAD),c.at(a,w+width/2,ROAD));
       }
+    };
+    for(const sign of [-1,1]) paint(c.start,c.end,sign*(c.arm.half-3),1.4);
+    const intervals=[]; let from=c.start;
+    for(const x of c.crossings.slice().sort((a,b)=>a.from-b.from)) {
+      if(x.from-1/BASE>from) intervals.push([from,x.from-1/BASE]);
+      from=x.to+1/BASE;
+    }
+    if(from<c.end) intervals.push([from,c.end]);
+    for(const [a,b] of intervals) {
+      paint(a,b,0,1.2);
+      if(c.arm.half===MAIN_HALF) for(const w of [-17.5,17.5])
+        for(let s=a;s<b;s+=18/BASE) paint(s,Math.min(b,s+9/BASE),w,1.1);
     }
   }
   const geometry = new THREE.BufferGeometry(), positions = [], normals = [], uvs = [];
@@ -293,65 +294,39 @@ export function buildRoundedJunctions(mesh) {
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.computeBoundingBox(); geometry.computeBoundingSphere();
-  return { geometry, junctions, corridors, crosswalks, sectorPath, world,
-    stats: { junctions: junctions.length, corners: junctions.reduce((n, j) => n + j.sectors.length, 0), corridors: corridors.length, crosswalks:crosswalks.length, triangles: positions.length / 9 } };
+  return { geometry, junctions, corridors, crosswalks, sectorPath, world, mainPath,
+    stats: { junctions: junctions.length, corners: junctions.reduce((n, j) => n + j.sectors.length, 0), corridors: corridors.length, crosswalks:crosswalks.length, triangles: positions.length / 9,
+      mainPath, mainEdges: [...mainEdges], mainHalf: MAIN_HALF, sideHalf: SIDE_HALF } };
 }
 
 export function relocateJunctionFurniture(city, plan) {
-  const changes = [], occupied = [];
+  const placements=[],occupied=[],candidates=[];
+  for(const j of plan.junctions)for(const sector of j.sectors)
+    for(const p of plan.sectorPath(sector,sector.a.half+20,sector.b.half+20))
+      candidates.push(plan.world(j,p,WALK));
+  for(const c of plan.corridors)for(const sign of [-1,1]) {
+    const n=Math.ceil((c.end-c.start)*BASE/4);
+    for(let k=0;k<=n;k++) candidates.push(c.at(c.start+(c.end-c.start)*k/n,sign*(c.arm.half+20),WALK));
+  }
   city.updateMatrixWorld(true);
-  const within = (p, polygon) => {
-    let inside = false;
-    for (let i = 0, k = polygon.length - 1; i < polygon.length; k = i++) {
-      const a = polygon[i], b = polygon[k];
-      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
-    }
-    return inside;
-  };
-  const point = new THREE.Vector3();
-  city.traverse(mesh => {
-    if (!mesh.isMesh || !/^(Street|Tree|Grass|Rock)_/.test(mesh.name)) return;
-    const pivot = mesh.getWorldPosition(new THREE.Vector3()), dir = pivot.clone().normalize();
-    const j = plan.junctions.find(j => dir.dot(j.up) > Math.cos(220 / BASE));
-    if (!j) return;
-    const local = v2(dir.dot(j.x), dir.dot(j.y)).multiplyScalar(BASE / dir.dot(j.up));
-    if (!within(local, j.outline)) return;
-    const street = /^Street/.test(mesh.name);
-    const radius = street ? WALK : 600;
-    const samples = j.sectors.flatMap(s => plan.sectorPath(s, street ? 54 : 82));
-    const candidates = samples.map(p => plan.world(j, p, radius))
-      .sort((a, b) => a.distanceToSquared(pivot) - b.distanceToSquared(pivot));
-    const target = candidates.find(p => occupied.every(q => p.distanceTo(q) > (street ? 8 : 13)));
-    if (!target || target.distanceTo(pivot) > 130) throw new Error('Cannot place junction furniture: ' + mesh.name);
+  const props=[];city.traverse(o=>{if(o.isMesh&&/^Street_/.test(o.name))props.push(o);});
+  props.sort((a,b)=>a.name.localeCompare(b.name));
+  for(const mesh of props) {
+    const pivot=mesh.getWorldPosition(new THREE.Vector3()),dir=pivot.clone().normalize();
+    const ordered=candidates.slice().sort((a,b)=>a.distanceToSquared(pivot)-b.distanceToSquared(pivot));
+    const target=ordered.find(p=>occupied.every(q=>p.distanceTo(q)>8));
+    if(!target||target.distanceTo(pivot)>140)throw new Error('Cannot place roadside furniture: '+mesh.name);
     occupied.push(target);
-    const rotation = new THREE.Quaternion().setFromUnitVectors(dir, target.clone().normalize());
-    const matrix = new THREE.Matrix4().makeRotationFromQuaternion(rotation).multiply(mesh.matrixWorld);
-    let minRadius = Infinity;
-    const attr = mesh.geometry.attributes.position;
-    for (let i = 0; i < attr.count; i++) minRadius = Math.min(minRadius, point.fromBufferAttribute(attr, i).applyMatrix4(matrix).length());
-    matrix.elements[12] += target.x / radius * (radius - minRadius);
-    matrix.elements[13] += target.y / radius * (radius - minRadius);
-    matrix.elements[14] += target.z / radius * (radius - minRadius);
+    const rotation=new THREE.Quaternion().setFromUnitVectors(dir,target.clone().normalize());
+    const matrix=new THREE.Matrix4().makeRotationFromQuaternion(rotation).multiply(mesh.matrixWorld);
+    const attr=mesh.geometry.attributes.position,point=new THREE.Vector3();let bottom=Infinity;
+    for(let i=0;i<attr.count;i++)bottom=Math.min(bottom,point.fromBufferAttribute(attr,i).applyMatrix4(matrix).length());
+    const shift=target.clone().normalize().multiplyScalar(WALK-bottom);
+    matrix.elements[12]+=shift.x;matrix.elements[13]+=shift.y;matrix.elements[14]+=shift.z;
     matrix.premultiply(mesh.parent.matrixWorld.clone().invert());
-    const position = new THREE.Vector3(), quaternion = new THREE.Quaternion(), scale = new THREE.Vector3();
-    matrix.decompose(position, quaternion, scale);
-    changes.push({ name: mesh.name, position: position.toArray(), quaternion: quaternion.toArray(), scale: scale.toArray() });
-  });
-  // The FBX street props were placed on the original sidewalk. Translate their
-  // whole transforms radially; do not shrink lamp posts, benches or planters.
-  const relocated = new Set(changes.map(p => p.name));
-  city.traverse(mesh => {
-    if (!mesh.isMesh || !/^Street_/.test(mesh.name) || relocated.has(mesh.name)) return;
-    const matrix = mesh.matrixWorld.clone();
-    const up = mesh.getWorldPosition(new THREE.Vector3()).normalize();
-    const shift = WALK - ORIGINAL_WALK;
-    matrix.elements[12] += up.x * shift;
-    matrix.elements[13] += up.y * shift;
-    matrix.elements[14] += up.z * shift;
-    matrix.premultiply(mesh.parent.matrixWorld.clone().invert());
-    const position = new THREE.Vector3(), quaternion = new THREE.Quaternion(), scale = new THREE.Vector3();
-    matrix.decompose(position, quaternion, scale);
-    changes.push({ name: mesh.name, position: position.toArray(), quaternion: quaternion.toArray(), scale: scale.toArray() });
-  });
-  return changes;
+    const position=new THREE.Vector3(),quaternion=new THREE.Quaternion(),scale=new THREE.Vector3();
+    matrix.decompose(position,quaternion,scale);
+    placements.push({name:mesh.name,position:position.toArray(),quaternion:quaternion.toArray(),scale:scale.toArray()});
+  }
+  return placements;
 }

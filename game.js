@@ -3,7 +3,9 @@ import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20260928';
-import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20260928-4';
+import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261013-01';
+import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
+import { installBuildingRoadLayout } from './building-road-layout.js?v=20261013-01';
 import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20260930-22';
 import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
@@ -372,24 +374,6 @@ function buildCars(root, atlas) {
 }
 function carGeo() { return carVariants[(Math.random() * carVariants.length) | 0]; }
 
-/* ---------- 最近墙面方向与距离（贴边停车用） ---------- */
-const _wpQ = new THREE.Quaternion();
-function wallProbe(q) {
-  let best = null;
-  for (let i = 0; i < 4; i++) {
-    const ang = i * Math.PI / 2;
-    let d = 7 * S;
-    for (let t = 1.2 * S; t < 7 * S; t += 0.7 * S) {
-      _wpQ.copy(q);
-      turn(_wpQ, ang);
-      advance(_wpQ, t);
-      if (blockedAt(_wpQ, 0.5 * S)) { d = t; break; }
-    }
-    if (!best || d < best.d) best = { ang, d };
-  }
-  return best;
-}
-
 /* frame -> 世界矩阵（把道具几何体烘到球面上） */
 const _fmP = new THREE.Vector3(), _fmS = new THREE.Vector3(1, 1, 1);
 function frameMatrix(q, h, out) {
@@ -403,17 +387,14 @@ function placeParked(n) {
   const q = new THREE.Quaternion(), back = new THREE.Quaternion();
   const m = new THREE.Matrix4(), pos = new THREE.Vector3();
   for (let i = 0, tries = 0; i < n && tries < n * 14; tries++) {
-    /* 只停在出生点这片街区，撒满整颗星球的话一辆也看不见 */
-    const road = findRoadFrame(2.2 * S, state.q, 320 * S);
-    const w = wallProbe(road);
-    if (!w || w.d < 3.4 * S || w.d > 5.6 * S) continue;
-    /* 先朝墙那侧挪过去，再转 90° 让车身与街道平行 */
-    q.copy(road);
-    turn(q, w.ang);
-    advance(q, w.d - 2.6 * S);
-    turn(q, Math.PI / 2);
-    if (Math.random() < 0.5) turn(q, Math.PI);
-    if (!onFlatRoad(q)) continue;
+    const lane=trafficLanes.lanes[(Math.random()*trafficLanes.lanes.length)|0];
+    const cursor={path:lane.id,distance:25+Math.random()*(lane.length-50),choice:0};
+    trafficLanes.sample(cursor,pos,q);
+    if(pos.distanceTo(player.position)>650)continue;
+    const right=fRight(q,new THREE.Vector3()),forward=fFwd(q,new THREE.Vector3());
+    pos.addScaledVector(right,lane.half+11-lane.offset).normalize();
+    frameFromDir(pos,forward,q);
+    if (!onFlatRoad(q) || driveAt(q,0)) continue;
     back.copy(q);
     turn(back, Math.PI);
     if (!dirClear(q, 3.4 * S, 1.1 * S) || !dirClear(back, 3.4 * S, 1.1 * S)) continue;
@@ -438,67 +419,47 @@ function placeParked(n) {
 /* ---------- 路上车流 ---------- */
 const traffic = [];
 const CAR_SPEED = 6.5 * S;
-/* 车流只准待在车道上。占用图只挡楼和树，草坪、广场、人行道在它眼里全是空地，
-   所以光用 dirClear 探路的车会一头开进草地。这里前方每 1.6 个身位取一点，
-   既查障碍也查车道掩码，横向留 0.9 个身位的余量（掩码格 1.2 单位、车宽 5 单位）。
-   注意起点从 1.6 个身位算，不查车自己脚下：车贴着路边线走时脚下那一圈本来就压线，
-   连自己脚下一起查会让四个方向全判不通、原地卡死，压测里出现过 300 秒重投 4 万次。 */
-const LANE_R = 0.9 * S;
-/* ?nolane 关掉车道约束（只剩障碍探路），用来对比「车是被车道卡住的还是本来就慢」 */
-const LANE_FREE = /(\?|&)nolane/.test(location.search);
-const _lcQ = new THREE.Quaternion(), _olU = new THREE.Vector3();
-function laneClear(q, dist) {
-  _lcQ.copy(q);
-  for (let d = 1.6 * S; d <= dist; d += 1.6 * S) {
-    advance(_lcQ, 1.6 * S);
-    if (blockedAt(_lcQ, 1.05 * S)) return false;
-    if (!LANE_FREE && !driveAt(_lcQ, LANE_R)) return false;
+let trafficLanes=null;
+const LANE_R=1.6*S;
+const _scPos=new THREE.Vector3(),_scNear=new THREE.Vector3();
+const _carUp=new THREE.Vector3(),_carRight=new THREE.Vector3(),_carForward=new THREE.Vector3(),_carProbe=new THREE.Vector3();
+let carBlockReason='';
+function carBodyClear(q,halfWidth=4.5,halfLength=9) {
+  fUp(q,_carUp);fRight(q,_carRight);fFwd(q,_carForward);
+  for(const x of [-halfWidth,0,halfWidth]) for(const z of [-halfLength,0,halfLength]) {
+    _carProbe.copy(_carUp).multiplyScalar(602).addScaledVector(_carRight,x).addScaledVector(_carForward,z).normalize();
+    if(!driveDir(_carProbe)){carBlockReason='surface';return false;}
+    if(collisionWorld?.blocked(_carProbe,.4)){carBlockReason=DEBUG?collisionWorld.explain(_carProbe,.4).join(','):'obstacle';return false;}
   }
   return true;
 }
-/* 落位硬闸门：只看车心那一格在不在车道上。这条不带横向余量，
-   探路负责「早点转弯别贴边」，这里只负责「车心一步都不许离开路面」。 */
-function onLane(q) { return LANE_FREE || driveDir(fUp(q, _olU)); }
-const _scPos = new THREE.Vector3(), _scNear = new THREE.Vector3();
-function spawnCar(c, nearQ, why) {
-  state.carResp = (state.carResp || 0) + 1;
-  if (why) state.rs[why] = (state.rs[why] || 0) + 1;
-  if (nearQ) framePos(nearQ, 0, _scNear);
-  for (let i = 0; i < 30; i++) {
-    const q = findRoadFrame(2.4 * S, nearQ, nearQ ? 95 * S : 0);
-    framePos(q, 0, _scPos);
-    if (nearQ && _scPos.distanceTo(_scNear) < 14 * S) continue;
-    /* 太远的也不要：findRoadFrame 在这一圈里凑不出车道时会退回北极那个兜底 frame，
-       那位置离玩家半个星球远，落位后立刻又触发「太远重投」，一帧一次死循环——
-       压测里 300 秒空转出过 3 万次重投。 */
-    if (nearQ && _scPos.distanceTo(_scNear) > 105 * S) continue;
-    /* 找一个「顺着车道」能往前开一段的朝向，四个方向都不顺就换地方 */
-    let ok = false;
-    for (let k = 0; k < 4; k++) {
-      if (laneClear(q, 8 * S)) { ok = true; break; }
-      turn(q, Math.PI / 2);
-    }
-    if (!ok) continue;
-    if (traffic.some(o => o !== c && o.alive && o.mesh.position.distanceTo(_scPos) < 7 * S)) continue;
-    c.q.copy(q);
-    c.v = 0;
-    c.stuck = 0;
-    c.alive = true;
-    c.mesh.position.copy(_scPos);
-    c.mesh.quaternion.copy(q);
-    c.mesh.visible = true;
+function spawnCar(c,nearQ,why) {
+  state.carResp=(state.carResp||0)+1;
+  if(why) state.rs[why]=(state.rs[why]||0)+1;
+  if(nearQ) framePos(nearQ,0,_scNear);
+  for(let i=0;i<240;i++) {
+    const lane=trafficLanes.lanes[(Math.random()*trafficLanes.lanes.length)|0];
+    const nav={path:lane.id,distance:12+Math.random()*(lane.length-24),choice:(Math.random()*1000)|0};
+    trafficLanes.sample(nav,_scPos,c.q);
+    const distance=_scPos.distanceTo(_scNear);
+    if(nearQ&&(distance<45||distance>310)) continue;
+    if(!carBodyClear(c.q)) continue;
+    if(traffic.some(o=>o!==c&&o.alive&&o.mesh.position.distanceTo(_scPos)<26)) continue;
+    c.nav=nav;c.v=0;c.stuck=0;c.alive=true;c.wait=0;
+    c.mesh.position.copy(_scPos);c.mesh.quaternion.copy(c.q);c.mesh.visible=true;
     return;
   }
-  c.alive = false;
-  c.mesh.visible = false;
+  c.alive=false;c.mesh.visible=false;
 }
 function initTraffic(n) {
   for (let i = 0; i < n; i++) {
-    const mesh = new THREE.Mesh(carGeo(), CAR_MAT);
+    // Long buses do not fit the tested two-lane turning envelope.
+    const models=carVariants.filter(g=>g.boundingBox.max.x-g.boundingBox.min.x<=8 && g.boundingBox.max.z-g.boundingBox.min.z<=17);
+    const mesh = new THREE.Mesh(models[(Math.random()*models.length)|0], CAR_MAT);
     mesh.castShadow = true;
     addOutline(mesh, 0.015 * S);
     scene.add(mesh);
-    const c = { mesh, q: new THREE.Quaternion(), v: 0, stuck: 0, alive: false };
+    const c = { id:i, mesh, q: new THREE.Quaternion(), v: 0, stuck: 0, alive: false };
     traffic.push(c);
     spawnCar(c, state.q);
   }
@@ -520,86 +481,52 @@ function pushAway(q, fromPos, amount) {
   turn(q, -ang);
 }
 
-const _tq1 = new THREE.Quaternion(), _tq2 = new THREE.Quaternion();
-const _tFwd = new THREE.Vector3(), _tD = new THREE.Vector3();
+const _tq1=new THREE.Quaternion(),_trafficP=new THREE.Vector3(),_trafficF=new THREE.Vector3(),_trafficD=new THREE.Vector3();
+const _futureP=new THREE.Vector3(),_futureQ=new THREE.Quaternion(),_otherF=new THREE.Vector3(),_nextNav={};
 function updateTraffic(dt) {
-  const fq = focusFrame(), fp = focusPos();
-  for (const c of traffic) {
-    if (!c.alive) {
-      /* spawnCar 一次找不到位置会把车收起来（alive=false）。这里隔一秒再试一次，
-         否则街上的车只会越跑越少，最后一辆不剩。 */
-      c.wait = (c.wait || 0) + dt;
-      if (c.wait > 1) { c.wait = 0; spawnCar(c, fq, 'retry'); }
-      continue;
-    }
-    let want = CAR_SPEED;
-    c.why = 'go';
-    if (!laneClear(c.q, 5.2 * S)) {
-      /* 前面到头了（撞上障碍，或者车道在这儿拐弯 / 结束）：先试左右两条车道 */
-      _tq1.copy(c.q); turn(_tq1, Math.PI / 2);
-      _tq2.copy(c.q); turn(_tq2, -Math.PI / 2);
-      if (laneClear(_tq1, 8 * S)) c.q.copy(_tq1);
-      else if (laneClear(_tq2, 8 * S)) c.q.copy(_tq2);
-      else {
-        /* 三面都出车道就掉头。掉头也不行才算真困住——不掉头的话车会顶着草地
-           一直等，路口边上停一排不动的车。 */
-        _tq1.copy(c.q); turn(_tq1, Math.PI);
-        if (laneClear(_tq1, 8 * S)) c.q.copy(_tq1);
-        else {
-          want = 0;
-          c.why = 'lane';
-          c.stuck += dt;
-          if (c.stuck > 2.5) { spawnCar(c, fq, 'lane'); continue; }
-        }
-      }
-    } else if (Math.random() < dt * 0.25) {
-      _tq1.copy(c.q);
-      turn(_tq1, Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
-      if (laneClear(_tq1, 9 * S)) c.q.copy(_tq1);
-    }
-
-    const cp = c.mesh.position;
-    fFwd(c.q, _tFwd);
-    for (const o of traffic) {
-      if (o === c || !o.alive) continue;
-      _tD.copy(o.mesh.position).sub(cp);
-      if (_tD.dot(_tFwd) > 0.5 && _tD.lengthSq() < 16 * S * S) { want = 0; c.why = 'car'; break; }
-    }
-    _tD.copy(fp).sub(cp);
-    if (_tD.dot(_tFwd) > 0.3 && _tD.lengthSq() < 14 * S * S) { want = 0; c.why = 'you'; }
-
-    c.v += clamp(want - c.v, -9 * S * dt, 2.5 * S * dt);
-    if (c.v > 0.05) {
-      _tq1.copy(c.q);
-      advance(_tq1, c.v * dt);
-      _tq2.copy(_tq1);
-      advance(_tq2, 1.9 * S);
-      /* 真正落位前再确认一次：往前 1.9 个身位既不撞东西、也还在车道上。
-         这一步是硬闸门，前面的探路只影响转向，出车道的位移一律不许提交。 */
-      if (!blockedAt(_tq2, 0.95 * S) && onLane(_tq2)) { c.q.copy(_tq1); c.stuck = 0; }
-      else {
-        c.v = 0;
-        c.why = 'wall';
-        c.stuck += dt;
-        if (c.stuck > 2.5) { spawnCar(c, fq, 'wall'); continue; }
+  const fq=focusFrame(),fp=focusPos();
+  for(const c of traffic) {
+    if(!c.alive) {c.wait=(c.wait||0)+dt;if(c.wait>1) spawnCar(c,fq,'retry');continue;}
+    const path=trafficLanes.paths[c.nav.path];
+    let want=path.kind==='turn'||path.length-c.nav.distance<30?CAR_SPEED*.6:CAR_SPEED;
+    c.why='go';
+    const look=trafficLanes.advance(c.nav,Math.max(13,c.v*1.2));
+    trafficLanes.sample(look,_trafficP,_tq1);
+    if(!carBodyClear(_tq1)) {want=0;c.why='wall';c.wallReason=carBlockReason;}
+    fFwd(c.q,_trafficF);
+    for(const o of traffic) {
+      if(o===c||!o.alive) continue;
+      _trafficD.copy(o.mesh.position).sub(c.mesh.position);
+      const ahead=_trafficD.dot(_trafficF),sideSq=_trafficD.lengthSq()-ahead*ahead;
+      if(ahead>0&&ahead<26&&sideSq<80&&fFwd(o.q,_otherF).dot(_trafficF)>.45) {want=0;c.why='car';break;}
+      // Reserve crossing space for one car at a time; stable priority avoids
+      // mutual yielding. Opposing lanes on straight roads stay independent.
+      if((path.kind==='turn'||trafficLanes.paths[look.path].kind==='turn')&&o.id<c.id) {
+        trafficLanes.sample(trafficLanes.advance(o.nav,Math.max(10,o.v)),_futureP,_futureQ);
+        if(_futureP.distanceTo(_trafficP)<22) {want=0;c.why='yield';break;}
       }
     }
-    framePos(c.q, 0, cp);
-    c.mesh.quaternion.slerp(c.q, Math.min(1, dt * 7));
-    /* 车流健康度：全时段平均速度 + 重投次数。只看瞬时速度会被「刚重投完在加速」骗过去 */
-    state.carVs = (state.carVs || 0) + c.v * dt;
-    state.carTs = (state.carTs || 0) + dt;
-
-    const dd = cp.distanceTo(fp);
-    if (dd < 2.1 * S && dd > 0.01) {
-      pushAway(fq, cp, 2.1 * S - dd);
-      if (state.onBike) state.speed *= 0.3; else foot.speed *= 0.3;
-      if (!state.bumpT || clock.elapsedTime - state.bumpT > 2) {
-        state.bumpT = clock.elapsedTime;
-        toast('小心车辆！');
-      }
+    _trafficD.copy(fp).sub(c.mesh.position);
+    const ahead=_trafficD.dot(_trafficF);
+    if(ahead>0&&ahead<20&&_trafficD.lengthSq()-ahead*ahead<42) {want=0;c.why='you';}
+    c.v+=clamp(want-c.v,-35*dt,7.5*dt);
+    if(c.v>.01) {
+      trafficLanes.advance(c.nav,c.v*dt,_nextNav);
+      trafficLanes.sample(_nextNav,_trafficP,_tq1);
+      if(carBodyClear(_tq1)) {
+        Object.assign(c.nav,_nextNav);c.q.copy(_tq1);c.stuck=0;
+        c.mesh.position.copy(_trafficP);c.mesh.quaternion.copy(c.q);
+      } else {c.v=0;c.why='wall';c.wallReason=carBlockReason;}
     }
-    if (dd > 115 * S) spawnCar(c, fq, 'far');
+    // Never choose a new heading to dodge an obstruction. A stopped car keeps
+    // its lane until the obstruction clears; distant cars can be recycled.
+    state.carVs=(state.carVs||0)+c.v*dt;state.carTs=(state.carTs||0)+dt;
+    const dd=c.mesh.position.distanceTo(fp);
+    if(dd<2.1*S&&dd>.01) {
+      pushAway(fq,c.mesh.position,2.1*S-dd);
+      if(state.onBike) state.speed*=.3;else foot.speed*=.3;
+    }
+    if(dd>115*S) spawnCar(c,fq,'far');
   }
 }
 
@@ -2293,20 +2220,31 @@ async function boot() {
   setProgress(0.52, '测量星球…');
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
-  const [roundedRoads, junctionFurniture, softTerrain, terrainProps] = await Promise.all([
-    withRetry('./assets/roads-rounded-v6.bin', () => fetchAsset('./assets/roads-rounded-v6.bin')),
-    withRetry('./assets/junction-furniture-v2.json', () => fetchAsset('./assets/junction-furniture-v2.json')),
+  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps] = await Promise.all([
+    withRetry('./assets/roads-rounded-v7.bin', () => fetchAsset('./assets/roads-rounded-v7.bin')),
+    withRetry('./assets/junction-furniture-v3.json', () => fetchAsset('./assets/junction-furniture-v3.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
-    withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json'))
+    withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
+    withRetry('./assets/building-road-layout-v1.json', () => fetchAsset('./assets/building-road-layout-v1.json')),
+    withRetry('./assets/traffic-lanes-v1.json', () => fetchAsset('./assets/traffic-lanes-v1.json')),
+    withRetry('./assets/roadside-props-v1.json', () => fetchAsset('./assets/roadside-props-v1.json'))
   ]);
   installRoadGeometry(city, decodeRoadGeometry(roundedRoads));
   installJunctionFurniture(city, JSON.parse(new TextDecoder().decode(junctionFurniture)));
+  trafficLanes=createTrafficLanes(JSON.parse(new TextDecoder().decode(trafficData)),PLANET.C);
   installSoftTerrain(city, decodeRoadGeometry(softTerrain), JSON.parse(new TextDecoder().decode(terrainProps)));
   setProgress(0.57, '铺开湖岸与木码头…');
   lakeside = createLakeside(city);
   if (DEBUG) console.info('Lakeside:', lakeside.stats);
   const density = reduceSceneDensity(city);
   if (DEBUG) console.info('Scene density:', density);
+  // Density reduction removes a deterministic subset; the layout assets use
+  // the original names, so apply them after the removal without requiring the
+  // full FBX to remain in memory.
+  const buildingStats = installBuildingRoadLayout(city, JSON.parse(new TextDecoder().decode(buildingLayout)));
+  if (DEBUG) console.info('Roadside buildings:', buildingStats);
+  installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
+
   const grassLevel = raiseGrassLevel(city);
   if (DEBUG) console.info('Grass level:', grassLevel);
   setProgress(0.58, '种下木纹树干…');
@@ -2417,22 +2355,21 @@ async function boot() {
 
   /* 星球周长 3.8 公里，邮箱要是撒满整颗星，最近的一个平均也在四百米外，
      一趟送信得开两分钟。全都投在出生点这片街区里，最远 300 个身位。 */
-  const mbQ = new THREE.Quaternion(), mbU = new THREE.Vector3();
-  for (let i = 0; i < 9; i++) {
-    const q = findRoadFrame(3 * S, state.q, 300 * S);
-    /* 从车道往路边挪一点，落在人行道上，别站在马路正中间 */
-    let ok = false;
-    for (let k = 0; k < 12 && !ok; k++) {
-      mbQ.copy(q);
-      turn(mbQ, rand(0, Math.PI * 2));
-      advance(mbQ, rand(2.4 * S, 4.2 * S));
-      ok = paveDir(fUp(mbQ, mbU)) && !blockedAt(mbQ, 0.6 * S);
-    }
-    if (!ok) mbQ.copy(q);
-    turn(mbQ, rand(0, Math.PI * 2));
-    state.mailboxes.push(makeMailbox(mbQ));
-    stampOcc(mbQ, 0.5 * S);
+  const mbQ=new THREE.Quaternion(),mbU=new THREE.Vector3(),mbP=new THREE.Vector3();
+  for(let attempts=0;state.mailboxes.length<9&&attempts<3000;attempts++) {
+    const lane=trafficLanes.lanes[(Math.random()*trafficLanes.lanes.length)|0];
+    trafficLanes.sample({path:lane.id,distance:25+Math.random()*(lane.length-50)},mbP,mbQ);
+    if(mbP.distanceTo(player.position)>850)continue;
+    const forward=fFwd(mbQ,new THREE.Vector3());
+    mbP.addScaledVector(fRight(mbQ,new THREE.Vector3()),lane.half+10-lane.offset).normalize();
+    frameFromDir(mbP,forward,mbQ);
+    fUp(mbQ,mbU);
+    if(!paveDir(mbU)||driveDir(mbU)||blockedAt(mbQ,2.5))continue;
+    framePos(mbQ,0,mbP);
+    if(state.mailboxes.some(m=>m.position.distanceTo(mbP)<35))continue;
+    state.mailboxes.push(makeMailbox(mbQ));stampOcc(mbQ,.5*S);
   }
+  if(state.mailboxes.length<9)throw new Error('没有找到足够的安全路边邮箱位置');
 
   setProgress(0.96, '布置车流与街景…');
   placeParked(IS_MOBILE ? 9 : 14);
@@ -2546,8 +2483,18 @@ async function boot() {
      （HUD 上 696 秒也只推进了不到 1 秒的物理），光看那行「车流在道」
      测到的永远是刚出生那一瞬间，必须像 selftest 一样空转步进。 */
   if (/(\?|&)cartest/.test(location.search)) {
+    const savedPlayer=player.position.clone();
+    const freeflow=new URLSearchParams(location.search).has('freeflow');
+    // Also test unrestricted throughput without a stationary player blocking
+    // an intersection for all five simulated minutes.
+    if(freeflow)player.position.addScaledVector(fUp(state.q,new THREE.Vector3()),100);
     const N = 9000, step = 1 / 30;
-    let mid = 0, wide = 0, samples = 0, vsum = 0, worst = 0;
+    let mid = 0, wide = 0, body = 0, samples = 0, vsum = 0, worst = 0;
+    const networkFailures=[],testP=new THREE.Vector3(),testQ=new THREE.Quaternion();
+    for(const path of trafficLanes.paths) for(let distance=0;distance<path.length;distance+=3) {
+      trafficLanes.sample({path:path.id,distance},testP,testQ);
+      if(!carBodyClear(testQ)){networkFailures.push(path.id+':'+carBlockReason);break;}
+    }
     const resp0 = state.carResp || 0;
     const u = new THREE.Vector3();
     for (let i = 0; i < N; i++) {
@@ -2556,6 +2503,7 @@ async function boot() {
       for (const c of traffic) {
         if (!c.alive) continue;
         samples++; vsum += c.v;
+        if(!carBodyClear(c.q)) body++;
         if (!driveDir(fUp(c.q, u))) { mid++; bad++; }        // 车心在不在车道上
         if (!driveAt(c.q, 1.6 * S)) wide++;                  // 半个车身范围全在车道上吗
       }
@@ -2563,12 +2511,16 @@ async function boot() {
     }
     $('dbg').textContent =
       `车流压测 ${(N * step).toFixed(0)}s × ${traffic.length} 辆  采样 ${samples} 次` +
-      (LANE_FREE ? '  ?nolane 已关闭车道约束' : '') + '\n' +
+      '\n' +
       `车心出车道 ${mid} 次 (${(mid / samples * 100).toFixed(2)}%)  同一帧最多 ${worst} 辆\n` +
       `半车身出车道 ${wide} 次 (${(wide / samples * 100).toFixed(2)}%)\n` +
+      `完整车身越界或碰撞 ${body} 次\n` +
       `平均速度 ${(vsum / samples * 3.6 / S).toFixed(1)}km/h（巡航 ${(CAR_SPEED * 3.6 / S).toFixed(0)}）` +
       `  重投 ${(state.carResp || 0) - resp0} 次 ` +
-      Object.keys(state.rs).map(k => k + ':' + state.rs[k]).join(' ');
+      Object.keys(state.rs).map(k => k + ':' + state.rs[k]).join(' ') + '\n' +
+      '全路网阻挡: '+(networkFailures.join(' / ')||'0')+'\n'+
+      traffic.map(c=>c.id+':'+c.why+' 路径'+c.nav?.path+' '+(c.wallReason||'')).join(' / ');
+    player.position.copy(savedPlayer);
     renderer.render(scene, camera);
     return;
   }

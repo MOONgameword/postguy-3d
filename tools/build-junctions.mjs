@@ -9,8 +9,8 @@ const t=performance.now();
 const result=buildRoundedJunctions(road);
 console.log('NETWORK',result.stats,'ms',performance.now()-t);
 const furniture=relocateJunctionFurniture(city,result);
-fs.writeFileSync(new URL('../assets/junction-furniture-v2.json',import.meta.url),JSON.stringify(furniture));
-console.log('FURNITURE',furniture.length,furniture.map(x=>x.name));
+fs.writeFileSync(new URL('../assets/junction-furniture-v3.json',import.meta.url),JSON.stringify(furniture));
+console.log('FURNITURE',furniture.length);
 road.geometry=result.geometry;
 const painted=conformRoadMarkings(city,new Vector3());
 console.log('PAINT',painted,'total ms',performance.now()-t);
@@ -23,8 +23,8 @@ g.groups.forEach((gr,i)=>{data.setUint32(16+i*12,gr.start,true);data.setUint32(2
 let offset=header;
 for(const name of ['position','normal','uv']){const attribute=g.attributes[name];new Float32Array(array,offset,attribute.array.length).set(attribute.array);offset+=attribute.array.byteLength;}
 const compressed=deflateSync(Buffer.from(array),{level:9});
-fs.writeFileSync(new URL('../assets/roads-rounded-v6.bin',import.meta.url),compressed);
+fs.writeFileSync(new URL('../assets/roads-rounded-v7.bin',import.meta.url),compressed);
 const info={...result.stats,junctionCount:result.stats.junctions,paint:painted,vertices:count,bytes:array.byteLength,compressedBytes:compressed.length,junctions:result.junctions.map((j,index)=>({index,position:j.up.clone().multiplyScalar(602).toArray(),arms:j.arms.length,cuts:j.arms.map(a=>a.cut),gaps:j.sectors.map(s=>s.gap*180/Math.PI)}))};
-fs.writeFileSync(new URL('../assets/rounded-road-report.json',import.meta.url),JSON.stringify(info,null,2));
-fs.writeFileSync(new URL('../assets/crosswalk-report.json',import.meta.url),JSON.stringify(result.crosswalks,null,2));
+fs.writeFileSync(new URL('../assets/rounded-road-report-v7.json',import.meta.url),JSON.stringify(info,null,2));
+fs.writeFileSync(new URL('../assets/crosswalk-report-v7.json',import.meta.url),JSON.stringify(result.crosswalks,null,2));
 console.log('SAVED',count,'vertices',array.byteLength,'bytes',compressed.length,'compressed bytes');
