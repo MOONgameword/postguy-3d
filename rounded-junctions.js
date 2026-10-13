@@ -277,7 +277,9 @@ export function buildRoundedJunctions(mesh) {
     }
     if(from<c.end) intervals.push([from,c.end]);
     for(const [a,b] of intervals) {
-      paint(a,b,0,1.2);
+      // Short white centre dashes with equal gaps, matching the lane dividers.
+      // Keep the crosswalk clear and bake into the existing road paint group.
+      for(let s=a;s<b;s+=18/BASE) paint(s,Math.min(b,s+9/BASE),0,1.2);
       if(c.arm.half===MAIN_HALF) for(const w of [-17.5,17.5])
         for(let s=a;s<b;s+=18/BASE) paint(s,Math.min(b,s+9/BASE),w,1.1);
     }

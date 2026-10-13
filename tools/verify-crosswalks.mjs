@@ -5,7 +5,7 @@ import {loadCity} from './load-city.mjs';
 import {buildRoundedJunctions} from '../rounded-junctions.js';
 import {decodeRoadGeometry} from '../road-geometry.js';
 const {road}=loadCity(),plan=buildRoundedJunctions(road);
-const data=fs.readFileSync(new URL('../assets/roads-rounded-v7.bin',import.meta.url));
+const data=fs.readFileSync(new URL('../assets/roads-rounded-v8.bin',import.meta.url));
 const geo=decodeRoadGeometry(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
 function materialMesh(name){
  const group=geo.groups.find(g=>road.material[g.materialIndex].name===name),g=new T.BufferGeometry();
@@ -31,4 +31,22 @@ for(const crosswalk of plan.crosswalks){
    assert.equal(hit(paint,p).length,0,'No old lane paint may fill crosswalk gaps');
  }
 }
-console.log(JSON.stringify({result:'PASS',intersections:8,crosswalks:26,stripes:plan.crosswalks.reduce((n,x)=>n+x.stripes,0),samples,minGap,maxGap},null,2));
+// Probe the baked centre paint and the empty gap, across every road corridor.
+let centreDashes=0,centreGaps=0;
+for(const c of plan.corridors){
+ const intervals=[];let from=c.start;
+ for(const x of c.crossings.slice().sort((a,b)=>a.from-b.from)){
+  if(x.from-1/600>from)intervals.push([from,x.from-1/600]);
+  from=x.to+1/600;
+ }
+ if(from<c.end)intervals.push([from,c.end]);
+ for(const [a,b] of intervals)for(let s=a;s+13.5/600<b;s+=18/600){
+  const p=c.at(s+4.5/600,0,602),gap=c.at(s+13.5/600,0,602);
+  const asphaltHit=hit(asphalt,p),paintHit=hit(paint,p);
+  assert.ok(asphaltHit.length&&paintHit.length,'White centre dash on every road');
+  assert.equal(hit(paint,gap).length,0,'Centre dash must have an unpainted gap');
+  assert.ok(Math.abs(paintHit[0].distance-asphaltHit[0].distance-.012)<.001,'Centre dash follows asphalt');
+  centreDashes++;centreGaps++;
+ }
+}
+console.log(JSON.stringify({result:'PASS',intersections:8,crosswalks:26,stripes:plan.crosswalks.reduce((n,x)=>n+x.stripes,0),samples,minGap,maxGap,centreDashes,centreGaps},null,2));
