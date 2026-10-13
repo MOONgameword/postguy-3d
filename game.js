@@ -18,6 +18,7 @@ import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
+import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261013-02';
 
 let meadowPlants = null;
 
@@ -232,6 +233,7 @@ function toonify(root, opts = {}) {
 
 /* ---------- 描边（反向壳 / inverted hull） ---------- */
 const OUTLINE = /(?:\?|&)outline(?:&|$)/.test(location.search);
+const OBJECT_INK = !/(?:\?|&)noline(?:&|$)/.test(location.search);
 const OUTLINE_MUL = parseFloat((location.search.match(/[?&]lw=([\d.]+)/) || [])[1]) || 1;
 const OUTLINE_COLOR = 0x2b2622;
 const outlineMats = new Map();
@@ -284,7 +286,7 @@ const vScale = new THREE.Vector3();
 function addOutline(root, world = 0.03) {
   if (!OUTLINE) return;
   const list = [];
-  root.traverse(o => { if (o.isMesh && !o.userData.__outline) list.push(o); });
+  root.traverse(o => { if (o.isMesh && !o.userData.__outline && !o.userData.surfaceInk) list.push(o); });
   for (const o of list) {
     if (!o.geometry || !o.geometry.attributes.normal) continue;
     bakeHullNormals(o.geometry);
@@ -369,7 +371,7 @@ function buildCars(root, atlas) {
     if (g.boundingBox.max.x - g.boundingBox.min.x > g.boundingBox.max.z - g.boundingBox.min.z) g.rotateY(Math.PI / 2);
     g.scale(CAR_UNIT, CAR_UNIT, CAR_UNIT);
     g.computeBoundingBox();
-    carVariants.push(g);
+    carVariants.push(OBJECT_INK ? bakeObjectInk(g) : g);
   });
 }
 function carGeo() { return carVariants[(Math.random() * carVariants.length) | 0]; }
@@ -412,6 +414,7 @@ function placeParked(n) {
   const mesh = new THREE.Mesh(mergeParts(geos), CAR_MAT);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
+  if (OBJECT_INK) applyObjectInk(mesh, 1.05);
   addOutline(mesh, 0.015 * S);
   scene.add(mesh);
 }
@@ -457,6 +460,7 @@ function initTraffic(n) {
     const models=carVariants.filter(g=>g.boundingBox.max.x-g.boundingBox.min.x<=8 && g.boundingBox.max.z-g.boundingBox.min.z<=17);
     const mesh = new THREE.Mesh(models[(Math.random()*models.length)|0], CAR_MAT);
     mesh.castShadow = true;
+    if (OBJECT_INK) applyObjectInk(mesh, 1.05);
     addOutline(mesh, 0.015 * S);
     scene.add(mesh);
     const c = { id:i, mesh, q: new THREE.Quaternion(), v: 0, stuck: 0, alive: false };
@@ -2283,6 +2287,11 @@ async function boot() {
   await new Promise(r => setTimeout(r, 16));
 
   setProgress(0.66, '铺开街道与树影…');
+  // Buildings retain their original geometry count and horizon culling. Ink
+  // is part of the surface shader; roads, vegetation, and props are untouched.
+  if (OBJECT_INK) city.traverse(o => {
+    if (o.isMesh && /^Bld_/.test(o.name)) applyObjectInk(o, 1.0);
+  });
   /* 减少场景物件后再创建描边；地表本身不能描边，避免包住整个星球。 */
   const inked = [];
   city.traverse(o => { if (o.isMesh && !TERRAIN.test(o.name) && !/^Grass/i.test(o.name) && !o.userData.stylizedTree) inked.push(o); });
@@ -2299,6 +2308,7 @@ async function boot() {
   const bikeMesh = new THREE.Mesh(bikeFlat.geometry, bikeFlat.material);
   bikeMesh.castShadow = true;
   bikeMesh.receiveShadow = true;
+  if (OBJECT_INK) applyObjectInk(bikeMesh, 1.05);
   bikeHolder.add(bikeMesh);
   addOutline(bikeHolder, 0.021 * S);
 

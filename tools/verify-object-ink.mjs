@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as T from '../vendor/three.module.js';
+import { FBXLoader } from '../vendor/loaders/FBXLoader.js';
+import { loadCity } from './load-city.mjs';
+import { applyObjectInk, bakeObjectInk, objectInkMaterial } from '../object-ink.js';
+
+const cube = new T.BoxGeometry();
+const inkCube = bakeObjectInk(cube);
+assert.equal(inkCube.userData.objectInk.featureEdges, 12, 'Do not draw box face diagonals / UV seams');
+assert.equal(bakeObjectInk(cube), inkCube, 'Repeated instances share one edge bake');
+assert.equal(inkCube.attributes.inkEdge.array.byteLength, inkCube.attributes.position.count * 3);
+const base = new T.MeshLambertMaterial();
+base.onBeforeCompile = shader => { shader.uniforms.existingPalette = { value: 1 }; };
+base.customProgramCacheKey = () => 'existing-palette';
+const mesh = new T.Mesh(cube, base), neighbour = new T.Mesh(cube, base);
+applyObjectInk(mesh); applyObjectInk(neighbour);
+assert.equal(mesh.material, neighbour.material, 'Share material across instances');
+assert.equal(mesh.geometry, neighbour.geometry);
+assert.equal(mesh.children.length, 0, 'No shell or line object draw calls');
+assert.notEqual(mesh.material, base, 'Shared ground / prop source materials are unaffected');
+const shader = { uniforms: {}, vertexShader: T.ShaderLib.lambert.vertexShader, fragmentShader: T.ShaderLib.lambert.fragmentShader };
+mesh.material.onBeforeCompile(shader);
+assert.equal(shader.uniforms.existingPalette.value, 1);
+assert.ok(shader.vertexShader.includes('vInkEdge = inkEdge'));
+assert.ok(shader.fragmentShader.includes('inkCoverage *= 1.0 - smoothstep'));
+assert.equal(objectInkMaterial(base), mesh.material);
+assert.ok(mesh.material.extensions.derivatives, 'Enable WebGL1 derivatives too');
+
+const { city } = loadCity();
+const carBytes = fs.readFileSync('assets/car-city.fbx');
+const cars = new FBXLoader().parse(carBytes.buffer.slice(carBytes.byteOffset, carBytes.byteOffset + carBytes.byteLength), '');
+let models = 0, triangles = 0, bytes = 0;
+for (const root of [city, cars]) root.traverse(o => {
+  if (!o.isMesh || (root === city && !/^Bld_/.test(o.name))) return;
+  const original = o.geometry, before = (original.index?.count ?? original.attributes.position.count) / 3;
+  const positions = original.attributes.position.array.slice();
+  const normals = original.attributes.normal.array.slice();
+  const geometry = bakeObjectInk(original);
+  assert.equal((geometry.index?.count ?? geometry.attributes.position.count) / 3, before);
+  assert.deepEqual(original.attributes.position.array, positions, 'Collision and rendered surfaces stay fixed');
+  assert.deepEqual(original.attributes.normal.array, normals, 'Lighting normals stay intact');
+  assert.ok(geometry.userData.objectInk.featureEdges > 0, o.name);
+  models++; triangles += before; bytes += geometry.userData.objectInk.bytes;
+});
+console.log({ models, triangles, edgeDataBytesBeforeDeduplication: bytes, additionalDrawCalls: 0, additionalTriangles: 0 });
+console.log('PASS: feature edges only; original surfaces unchanged; no shell meshes; shared geometry/material; palette preserved');
