@@ -1,27 +1,30 @@
 {
   "before": {
     "buildings": 414,
-    "trees": 1124,
-    "groundPlants": 937,
-    "meshes": 3001,
-    "triangles": 2557028
+    "trees": 1043,
+    "groundPlants": 865,
+    "sidewalkProps": 168,
+    "meshes": 2848,
+    "triangles": 2477148
   },
   "after": {
     "buildings": 276,
-    "trees": 750,
+    "trees": 696,
     "groundPlants": 0,
-    "meshes": 1552,
-    "triangles": 1477480
+    "sidewalkProps": 0,
+    "meshes": 1330,
+    "triangles": 1470200
   },
   "removed": {
     "buildings": 138,
-    "trees": 374,
-    "groundPlants": 937,
-    "meshes": 1449,
-    "triangles": 1079548
+    "trees": 347,
+    "groundPlants": 865,
+    "sidewalkProps": 168,
+    "meshes": 1518,
+    "triangles": 1006948
   },
-  "triangleReductionPercent": 42.2,
-  "removedObstacleProbes": 512,
-  "collisionObjects": 1525,
+  "triangleReductionPercent": 40.6,
+  "removedObstacleProbes": 653,
+  "collisionObjects": 1297,
   "result": "PASS"
 }

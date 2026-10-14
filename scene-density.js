@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 
 const groundPlants = /^(Grass|Flowers?|Floral|LakeReeds)(_|$)/i;
+// Source FBX Street_* includes both lamps and obsolete sidewalk furniture.
+// Its local Z axis is vertical. Only lamps have a tall, narrow silhouette;
+// planter trees, bins and benches are all broader than this profile.
+export function isLegacySidewalkProp(mesh) {
+  if (!mesh.isMesh || !/^Street_\d+$/.test(mesh.name)) return false;
+  mesh.geometry.computeBoundingBox();
+  const size = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+  return size.z <= Math.max(size.x, size.y) * 4;
+}
 const hash = name => {
   let value = 2166136261;
   for (const ch of name) value = Math.imul(value ^ ch.charCodeAt(0), 16777619);
@@ -8,7 +17,7 @@ const hash = name => {
 };
 
 export function sceneMeshStats(root) {
-  const stats = { buildings: 0, trees: 0, groundPlants: 0, meshes: 0, triangles: 0 };
+  const stats = { buildings: 0, trees: 0, groundPlants: 0, sidewalkProps: 0, meshes: 0, triangles: 0 };
   root.traverse(mesh => {
     if (!mesh.isMesh) return;
     stats.meshes++;
@@ -16,6 +25,7 @@ export function sceneMeshStats(root) {
     if (/^Bld_/.test(mesh.name)) stats.buildings++;
     if (/^Tree_/.test(mesh.name)) stats.trees++;
     if (groundPlants.test(mesh.name)) stats.groundPlants++;
+    if (isLegacySidewalkProp(mesh)) stats.sidewalkProps++;
   });
   return stats;
 }
@@ -50,14 +60,15 @@ function chooseThird(meshes) {
 export function reduceSceneDensity(city) {
   if (city.userData.densityReduction) return city.userData.densityReduction;
   city.updateMatrixWorld(true);
-  const before = sceneMeshStats(city), buildings = [], trees = [], plants = [];
+  const before = sceneMeshStats(city), buildings = [], trees = [], plants = [], sidewalkProps = [];
   city.traverse(mesh => {
     if (!mesh.isMesh) return;
     if (/^Bld_/.test(mesh.name)) buildings.push(mesh);
     else if (/^Tree_/.test(mesh.name)) trees.push(mesh);
     else if (groundPlants.test(mesh.name)) plants.push(mesh);
+    else if (isLegacySidewalkProp(mesh)) sidewalkProps.push(mesh);
   });
-  const removed = [...chooseThird(buildings), ...chooseThird(trees), ...plants];
+  const removed = [...chooseThird(buildings), ...chooseThird(trees), ...plants, ...sidewalkProps];
   for (const mesh of removed) mesh.removeFromParent();
   // Dedupe shares geometry across instances; only release geometry with no users.
   const retainedGeometry = new Set();
@@ -71,6 +82,7 @@ export function reduceSceneDensity(city) {
     buildings: before.buildings - after.buildings,
     trees: before.trees - after.trees,
     groundPlants: before.groundPlants - after.groundPlants,
+    sidewalkProps: before.sidewalkProps - after.sidewalkProps,
     meshes: before.meshes - after.meshes,
     triangles: before.triangles - after.triangles
   } };

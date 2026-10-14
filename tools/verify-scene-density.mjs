@@ -9,9 +9,9 @@ import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } fro
 import { createCollisionWorld } from '../collision-world.js';
 
 const { city, road } = loadCity();
-const roadBytes = fs.readFileSync('assets/roads-rounded-v5.bin');
+const roadBytes = fs.readFileSync('assets/roads-rounded-v9.bin');
 installRoadGeometry(city, decodeRoadGeometry(roadBytes.buffer.slice(roadBytes.byteOffset, roadBytes.byteOffset + roadBytes.byteLength)));
-installJunctionFurniture(city, JSON.parse(fs.readFileSync('assets/junction-furniture-v2.json')));
+installJunctionFurniture(city, JSON.parse(fs.readFileSync('assets/junction-furniture-v3.json')));
 installTestTerrain(city);
 // Exercise removal of reeds too, including loading a scene where they exist.
 createLakeside(city, { includeReeds: true });
@@ -24,6 +24,9 @@ const stats = reduceSceneDensity(city);
 assert.equal(stats.removed.buildings, Math.floor(before.buildings / 3));
 assert.equal(stats.removed.trees, Math.floor(before.trees / 3));
 assert.equal(stats.after.groundPlants, 0);
+assert.equal(stats.removed.sidewalkProps, 168, 'Remove all original sidewalk decorations');
+assert.equal(stats.after.sidewalkProps, 0);
+assert.equal(originalMeshes.filter(m => /^Street_/.test(m.name) && m.parent).length, 168, 'Keep the street lamps');
 assert.equal(city.getObjectByName('Roads').geometry, roads);
 assert.equal(city.getObjectByName('Planet').geometry, terrain);
 assert.ok(city.getObjectByName('Bld_0333'));
@@ -39,13 +42,13 @@ const world = createCollisionWorld(city);
 assert.ok(world.shapes.every(shape => retained.has(shape.name)), 'No removed object may remain in collision data');
 let removedObstacleProbes = 0;
 for (const mesh of originalMeshes) {
-  if (retained.has(mesh.name) || !/^(Bld|Tree)_/.test(mesh.name)) continue;
+  if (retained.has(mesh.name) || !/^(Bld|Tree|Street)_/.test(mesh.name)) continue;
   const dir = mesh.getWorldPosition(new THREE.Vector3()).normalize();
   assert.ok(!world.explain(dir, 0).includes(mesh.name), 'Deleted model must not leave a collider');
   removedObstacleProbes++;
 }
 const expectedObjects = stats.after.buildings + stats.after.trees
-  + originalMeshes.filter(m => /^(Rock|Street)_/.test(m.name)).length;
+  + originalMeshes.filter(m => /^(Rock|Street)_/.test(m.name) && retained.has(m.name)).length;
 assert.equal(world.stats.objects, expectedObjects, 'Collision world contains retained obstacles only');
 assert.ok(stats.removed.triangles > 0);
 const report = { ...stats, triangleReductionPercent: Number((stats.removed.triangles / before.triangles * 100).toFixed(1)),

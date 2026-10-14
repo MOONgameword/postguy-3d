@@ -7,7 +7,7 @@ import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } fro
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261013-01';
 import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20260930-22';
-import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
+import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261014-01';
