@@ -27,7 +27,9 @@ const occupied=[],placements=[],failures=[],ray=new T.Raycaster(),temp=new T.Vec
 for(const b of buildings.slice().sort((a,b)=>b.diag-a.diag||a.name.localeCompare(b.name))){
  const candidates=[];
  for(const [ci,c] of plan.corridors.entries())for(const sign of [-1,1]){
-  const offset=c.arm.outer+3+b.ry,margin=(b.rx+8)/600;
+  // Keep the building frontage just beyond the grass-side curb. The old
+  // three-unit buffer made the narrow sidewalk read as an empty strip.
+  const offset=c.arm.outer+0.8+b.ry,margin=(b.rx+8)/600;
   for(let s=c.start+margin;s<c.end-margin;s+=5/600){
    const p=c.at(s,sign*offset,600);candidates.push({p,s,sign,c,ci,score:p.distanceToSquared(b.original)});
   }

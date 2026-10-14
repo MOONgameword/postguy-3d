@@ -6,7 +6,7 @@ const BASE = 600, ROAD = 602, ORIGINAL_WALK = 604.6;
 // reads in the normal map and keeps the sidewalk walkable without adding a
 // high-poly curb profile.
 const WALK = ROAD + (ORIGINAL_WALK - ROAD) / 3;
-const CURB_TOP = WALK + 0.12;
+const CURB_TOP = WALK + 0.20;
 // The source FBX uses a wide four-lane strip everywhere.  Keep one continuous
 // arterial at that width, and make every other corridor a compact two-lane road.
 const MAIN_HALF = 35, SIDE_HALF = 18, SIDEWALK = 15;
@@ -319,11 +319,11 @@ export function buildRoundedJunctions(mesh) {
 export function relocateJunctionFurniture(city, plan) {
   const placements=[],occupied=[],candidates=[];
   for(const j of plan.junctions)for(const sector of j.sectors)
-    for(const p of plan.sectorPath(sector,sector.a.half+20,sector.b.half+20))
+    for(const p of plan.sectorPath(sector,sector.a.outer-2.2,sector.b.outer-2.2))
       candidates.push(plan.world(j,p,WALK));
   for(const c of plan.corridors)for(const sign of [-1,1]) {
     const n=Math.ceil((c.end-c.start)*BASE/4);
-    for(let k=0;k<=n;k++) candidates.push(c.at(c.start+(c.end-c.start)*k/n,sign*(c.arm.half+20),WALK));
+    for(let k=0;k<=n;k++) candidates.push(c.at(c.start+(c.end-c.start)*k/n,sign*(c.arm.outer-2.2),WALK));
   }
   city.updateMatrixWorld(true);
   const props=[];city.traverse(o=>{if(o.isMesh&&/^Street_/.test(o.name))props.push(o);});

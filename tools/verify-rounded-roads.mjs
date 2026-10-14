@@ -71,7 +71,7 @@ function assertGround(p, mesh, label) {
 for (const [ji, junction] of plan.junctions.entries()) for (const [si, sector] of junction.sectors.entries()) {
   for (const p of plan.sectorPath(sector, sector.a.outer-.7, sector.b.outer-.7).slice(1, -1)) {
     const height = assertGround(plan.world(junction, p, 602 + 2.6 / 3 + .02), curb, 'Grass-side curb cap');
-    assert.ok(height > 602.94 && height < 603.05, 'Grass curb must stay just above sidewalk height');
+    assert.ok(height > 603.02 && height < 603.14, 'Grass curb must stay just above sidewalk height');
     grassCurbChecks++;
   }
   // The cap must cover the new narrow edge, leaving the old broad strip paved.
@@ -91,7 +91,7 @@ for (const corridor of plan.corridors) for (let k = 0; k <= 20; k++) {
   if (k > 0 && k < 20) for (const sign of [-1, 1]) {
     const edge = p.clone().multiplyScalar(600 / 602).addScaledVector(corridor.side, sign * (corridor.arm.outer-.7));
     const height = assertGround(edge, curb, 'Straight grass-side curb cap');
-    assert.ok(height > 602.94 && height < 603.05);
+    assert.ok(height > 603.02 && height < 603.14);
     grassCurbChecks++;
   }
 }
