@@ -2,11 +2,16 @@ import * as THREE from 'three';
 import { tessellateJunction } from './junction-tessellation.js';
 
 const BASE = 600, ROAD = 602, ORIGINAL_WALK = 604.6;
+// Keep the paving deck slightly below the raised curb caps.  The small step
+// reads in the normal map and keeps the sidewalk walkable without adding a
+// high-poly curb profile.
 const WALK = ROAD + (ORIGINAL_WALK - ROAD) / 3;
+const CURB_TOP = WALK + 0.12;
 // The source FBX uses a wide four-lane strip everywhere.  Keep one continuous
 // arterial at that width, and make every other corridor a compact two-lane road.
-const MAIN_HALF = 35, SIDE_HALF = 18, SIDEWALK = 30;
+const MAIN_HALF = 35, SIDE_HALF = 18, SIDEWALK = 15;
 const CURB_GAP = 1.4;
+const TACTILE_GAP = 3.2, TACTILE_WIDTH = 2.0;
 const TAU = Math.PI * 2;
 const v2 = (x = 0, y = 0) => new THREE.Vector2(x, y);
 const left = d => v2(-d.y, d.x);
@@ -21,6 +26,9 @@ export function buildRoundedJunctions(mesh) {
   const roadIndex = materialIndex('City_Road'), lineIndex = materialIndex('City_RoadLine');
   const walkIndex = materialIndex('City_Sidewalk'), curbIndex = materialIndex('City_Curb');
   if ([roadIndex, lineIndex, walkIndex, curbIndex].some(i => i < 0)) throw new Error('Missing road material groups');
+  // The source FBX has four material slots.  The baked road adds one light
+  // tactile strip slot; it is installed by road-geometry.js at runtime.
+  const tactileIndex = mats.length;
   const vertexMap = new Map(), vertices = [], edges = new Map();
   const read = i => new THREE.Vector3().fromBufferAttribute(source.attributes.position,
     source.index ? source.index.getX(i) : i).applyMatrix4(mesh.matrixWorld);
@@ -135,6 +143,7 @@ export function buildRoundedJunctions(mesh) {
     return points;
   }
   const buffers = mats.map(() => ({ position: [], normal: [], uv: [] }));
+  buffers.push({ position: [], normal: [], uv: [] });
   const inverse = mesh.matrixWorld.clone().invert();
   const normalToLocal = new THREE.Matrix3().setFromMatrix4(mesh.matrixWorld).transpose();
   const local = p => {
@@ -189,10 +198,13 @@ export function buildRoundedJunctions(mesh) {
       const strips=Math.ceil(2*sector.b.half/10);
       for(let k=1;k<strips;k++) outline.push(mouth(sector.b,-sector.b.half+2*sector.b.half*k/strips));
       ribbon(j, front, back, WALK, WALK, walkIndex);
-      ribbon(j, front, front, ROAD, WALK, curbIndex);
-      ribbon(j, front, curbPath, WALK + 0.02, WALK + 0.02, curbIndex);
-      ribbon(j, back, back, WALK, 600, curbIndex);
-      ribbon(j, back, sectorPath(sector, sector.a.outer - CURB_GAP, sector.b.outer - CURB_GAP), WALK + .02, WALK + .02, curbIndex);
+      ribbon(j, front, front, ROAD, CURB_TOP, curbIndex);
+      ribbon(j, front, curbPath, CURB_TOP, CURB_TOP, curbIndex);
+      ribbon(j, back, back, CURB_TOP, 600, curbIndex);
+      ribbon(j, back, sectorPath(sector, sector.a.outer - CURB_GAP, sector.b.outer - CURB_GAP), CURB_TOP, CURB_TOP, curbIndex);
+      const tactileA = sectorPath(sector, sector.a.half + TACTILE_GAP, sector.b.half + TACTILE_GAP);
+      const tactileB = sectorPath(sector, sector.a.half + TACTILE_GAP + TACTILE_WIDTH, sector.b.half + TACTILE_GAP + TACTILE_WIDTH);
+      ribbon(j, tactileA, tactileB, WALK + .018, WALK + .018, tactileIndex);
       ribbon(j,sectorPath(sector,sector.a.half-3.7,sector.b.half-3.7),
         sectorPath(sector,sector.a.half-2.3,sector.b.half-2.3),ROAD+.02,ROAD+.02,lineIndex);
     }
@@ -249,12 +261,15 @@ export function buildRoundedJunctions(mesh) {
       }
       for (const sign of [-1, 1]) {
         quad(walkIndex, at(a, sign * half, WALK), at(b, sign * half, WALK), at(b, sign * outer, WALK), at(a, sign * outer, WALK));
+        const tactileCenter = half + TACTILE_GAP + TACTILE_WIDTH / 2;
+        quad(tactileIndex, at(a, sign * (tactileCenter - TACTILE_WIDTH / 2), WALK + .018), at(b, sign * (tactileCenter - TACTILE_WIDTH / 2), WALK + .018),
+          at(b, sign * (tactileCenter + TACTILE_WIDTH / 2), WALK + .018), at(a, sign * (tactileCenter + TACTILE_WIDTH / 2), WALK + .018));
         const u0 = k / count * curbRepeats, u1 = (k + 1) / count * curbRepeats;
-        quad(curbIndex, at(a, sign * half, ROAD), at(b, sign * half, ROAD), at(b, sign * half, WALK), at(a, sign * half, WALK), u0, u1);
-        quad(curbIndex, at(a, sign * half, WALK + .02), at(b, sign * half, WALK + .02), at(b, sign * (half + CURB_GAP), WALK + .02), at(a, sign * (half + CURB_GAP), WALK + .02), u0, u1);
-        quad(curbIndex, at(a, sign * outer, WALK), at(b, sign * outer, WALK), at(b, sign * outer, 600), at(a, sign * outer, 600), u0, u1);
+        quad(curbIndex, at(a, sign * half, ROAD), at(b, sign * half, ROAD), at(b, sign * half, CURB_TOP), at(a, sign * half, CURB_TOP), u0, u1);
+        quad(curbIndex, at(a, sign * half, CURB_TOP), at(b, sign * half, CURB_TOP), at(b, sign * (half + CURB_GAP), CURB_TOP), at(a, sign * (half + CURB_GAP), CURB_TOP), u0, u1);
+        quad(curbIndex, at(a, sign * outer, CURB_TOP), at(b, sign * outer, CURB_TOP), at(b, sign * outer, 600), at(a, sign * outer, 600), u0, u1);
         const innerEdge = sign * (outer - CURB_GAP);
-        quad(curbIndex, at(a, sign * outer, WALK + .02), at(b, sign * outer, WALK + .02), at(b, innerEdge, WALK + .02), at(a, innerEdge, WALK + .02), u0, u1);
+        quad(curbIndex, at(a, sign * outer, CURB_TOP), at(b, sign * outer, CURB_TOP), at(b, innerEdge, CURB_TOP), at(a, innerEdge, CURB_TOP), u0, u1);
       }
     }
     corridors.push({ j, other, arm, reverse, start, end, side, crossings, at });

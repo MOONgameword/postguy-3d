@@ -10,7 +10,7 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20260929-9';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261008-08';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261014-01';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
@@ -2231,7 +2231,7 @@ async function boot() {
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
   const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas] = await Promise.all([
-    withRetry('./assets/roads-rounded-v8.bin', () => fetchAsset('./assets/roads-rounded-v8.bin')),
+    withRetry('./assets/roads-rounded-v9.bin', () => fetchAsset('./assets/roads-rounded-v9.bin')),
     withRetry('./assets/junction-furniture-v3.json', () => fetchAsset('./assets/junction-furniture-v3.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),

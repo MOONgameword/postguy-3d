@@ -77,7 +77,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
 }
 
 export async function installSurfaceMaterials(city, renderer, loadTexture) {
-  const kinds = ['grass-v2', 'asphalt', 'pavers', 'curb-v1'];
+  const kinds = ['grass-v2', 'asphalt', 'pavers', 'curb-v1', 'tactile'];
   const textures = await Promise.all(kinds.map(async kind => {
     const [base, detail] = await Promise.all(['base', 'detail'].map(channel =>
       loadTexture(`./assets/surfaces/${kind}-${channel}-512.webp`)));
@@ -92,7 +92,7 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     }
     return { base, detail };
   }));
-  const [grass, asphalt, pavers, curb] = textures;
+  const [grass, asphalt, pavers, curb, tactile] = textures;
   const nap = await loadTexture('./assets/surfaces/grass-nap-v1-512.webp');
   nap.wrapS = nap.wrapT = THREE.RepeatWrapping;
   nap.colorSpace = THREE.NoColorSpace;
@@ -104,6 +104,9 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     City_Meadow: surfaceMaterial('City_Meadow', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Road: surfaceMaterial('City_Road', asphalt.base, asphalt.detail, { color: 0xc2c4be, period: 12, strength: .16 }),
     City_Sidewalk: surfaceMaterial('City_Sidewalk', pavers.base, pavers.detail, { color: 0xe4e1d0, period: 12, strength: .24 }),
+    // A low-poly guidance strip gets its raised-dot/line relief entirely from
+    // the detail normal map; it does not add a separate modeled curb.
+    City_Tactile: surfaceMaterial('City_Tactile', tactile.base, tactile.detail, { color: 0xf0d49b, period: 2.2, strength: .42 }),
     City_Curb: new THREE.MeshStandardMaterial({
       name: 'City_Curb', map: curb.base, normalMap: curb.detail,
       normalScale: new THREE.Vector2(.22, .22), color: 0xffffff,

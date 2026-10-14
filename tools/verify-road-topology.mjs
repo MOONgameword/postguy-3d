@@ -5,7 +5,7 @@ import { loadCity } from './load-city.mjs';
 import { decodeRoadGeometry } from '../road-geometry.js';
 
 const { road } = loadCity();
-const file = process.argv[2] || 'assets/roads-rounded-v8.bin';
+const file = process.argv[2] || 'assets/roads-rounded-v9.bin';
 const bytes = fs.readFileSync(file);
 const geometry = decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 const pos = geometry.attributes.position;
@@ -14,7 +14,7 @@ const edgeKey = (a, b) => [a, b].sort().join('|');
 const edges = new Map(), rim = new Set(), faces = new Set();
 let duplicates = 0;
 for (const group of geometry.groups) {
-  const name = road.material[group.materialIndex].name;
+  const name = road.material[group.materialIndex]?.name || (group.materialIndex === 4 ? 'City_Tactile' : '');
   if (!['City_Road', 'City_Curb'].includes(name)) continue;
   for (let i = group.start; i < group.start + group.count; i += 3) {
     const ids = [0, 1, 2].map(k => vertexKey(i + k));

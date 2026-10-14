@@ -8,7 +8,7 @@ import { decodeRoadGeometry, installJunctionFurniture } from '../road-geometry.j
 const { city, road } = loadCity();
 const plan = buildRoundedJunctions(road);
 assert.deepEqual([plan.stats.junctions, plan.stats.corners, plan.stats.corridors], [10, 30, 15]);
-const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v8.bin', import.meta.url));
+const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v9.bin', import.meta.url));
 const geometry = decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 const positions = geometry.attributes.position, normals = geometry.attributes.normal;
 const sidewalkGroup=geometry.groups.find(g=>road.material[g.materialIndex].name==='City_Sidewalk');
@@ -71,18 +71,18 @@ function assertGround(p, mesh, label) {
 for (const [ji, junction] of plan.junctions.entries()) for (const [si, sector] of junction.sectors.entries()) {
   for (const p of plan.sectorPath(sector, sector.a.outer-.7, sector.b.outer-.7).slice(1, -1)) {
     const height = assertGround(plan.world(junction, p, 602 + 2.6 / 3 + .02), curb, 'Grass-side curb cap');
-    assert.ok(height > 602.8 && height < 602.9, 'Grass curb must stay at sidewalk height');
+    assert.ok(height > 602.94 && height < 603.05, 'Grass curb must stay just above sidewalk height');
     grassCurbChecks++;
   }
   // The cap must cover the new narrow edge, leaving the old broad strip paved.
   const narrow = plan.sectorPath(sector, sector.a.half+.7, sector.b.half+.7), paved = plan.sectorPath(sector, sector.a.half+4, sector.b.half+4);
   for (let k = 1; k < narrow.length - 1; k++) {
-    assertGround(plan.world(junction, narrow[k], (602 + 2.6 / 3 + .02)), curb, 'Narrow curb continuity');
-    ray.set(origin, plan.world(junction, paved[k], (602 + 2.6 / 3 + .02)).normalize());
+    assertGround(plan.world(junction, narrow[k], (602 + 2.6 / 3 + .12)), curb, 'Narrow curb continuity');
+    ray.set(origin, plan.world(junction, paved[k], (602 + 2.6 / 3 + .12)).normalize());
     assert.equal(ray.intersectObject(curb, false).length, 0, 'Old wide cap must be removed');
   }
   for (const [pi, p] of plan.sectorPath(sector, sector.a.half*.5, sector.b.half*.5).entries()) { assertGround(plan.world(junction, p, 602), asphalt, `J${ji} turn ${si} sample ${pi} (${p.x},${p.y})`); roadChecks++; }
-  for (const p of plan.sectorPath(sector, sector.a.half+18, sector.b.half+18)) { assertGround(plan.world(junction, p, (602 + 2.6 / 3)), sidewalk, `J${ji} sidewalk ${si}`); walkChecks++; }
+  for (const p of plan.sectorPath(sector, sector.a.half+7, sector.b.half+7)) { assertGround(plan.world(junction, p, (602 + 2.6 / 3)), sidewalk, `J${ji} sidewalk ${si}`); walkChecks++; }
 }
 for (const corridor of plan.corridors) for (let k = 0; k <= 20; k++) {
   const s = corridor.start + (corridor.end - corridor.start) * k / 20;
@@ -91,7 +91,7 @@ for (const corridor of plan.corridors) for (let k = 0; k <= 20; k++) {
   if (k > 0 && k < 20) for (const sign of [-1, 1]) {
     const edge = p.clone().multiplyScalar(600 / 602).addScaledVector(corridor.side, sign * (corridor.arm.outer-.7));
     const height = assertGround(edge, curb, 'Straight grass-side curb cap');
-    assert.ok(height > 602.8 && height < 602.9);
+    assert.ok(height > 602.94 && height < 603.05);
     grassCurbChecks++;
   }
 }

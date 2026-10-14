@@ -17,7 +17,7 @@ export function decodeRoadGeometry(buffer) {
   }
   for (let i = 0; i < groupCount; i++) {
     const start = data.getUint32(16 + i * 12, true), length = data.getUint32(20 + i * 12, true), material = data.getUint32(24 + i * 12, true);
-    if (start + length > count || length % 3 || material > 3) throw new Error('Invalid rounded-road material group');
+    if (start + length > count || length % 3 || material > 4) throw new Error('Invalid rounded-road material group');
     geometry.addGroup(start, length, material);
   }
   geometry.computeBoundingBox(); geometry.computeBoundingSphere();
@@ -29,6 +29,18 @@ export function installRoadGeometry(city, geometry) {
   city.traverse(mesh => {
     if (!mesh.isMesh || mesh.name !== 'Roads') return;
     mesh.geometry = geometry;
+    // Rounded-road v9 adds a narrow tactile guidance strip as a fifth
+    // material group.  Append a named placeholder before surface materials
+    // are installed so the normal-map material can be swapped in uniformly.
+    const groups = geometry.groups || [];
+    const maxMaterial = groups.reduce((n, g) => Math.max(n, g.materialIndex), -1);
+    if (maxMaterial >= 0) {
+      const current = Array.isArray(mesh.material) ? mesh.material.slice() : [mesh.material];
+      while (current.length <= maxMaterial) current.push(new THREE.MeshStandardMaterial({
+        name: 'City_Tactile', color: 0xe5c987, roughness: .92, metalness: 0, side: THREE.DoubleSide
+      }));
+      mesh.material = current;
+    }
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const material of mats) if (/^City_(RoadLine|Curb)$/.test(material.name)) {
       material.polygonOffset = true;
