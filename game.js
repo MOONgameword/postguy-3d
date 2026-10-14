@@ -19,6 +19,7 @@ import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
 import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261013-02';
+import { decodeStreetBuildings, streetBuildingMaterial, installStreetBuildings } from './street-buildings.js?v=20261014-01';
 
 let meadowPlants = null;
 
@@ -2224,14 +2225,17 @@ async function boot() {
   setProgress(0.52, '测量星球…');
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
-  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps] = await Promise.all([
+  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas] = await Promise.all([
     withRetry('./assets/roads-rounded-v8.bin', () => fetchAsset('./assets/roads-rounded-v8.bin')),
     withRetry('./assets/junction-furniture-v3.json', () => fetchAsset('./assets/junction-furniture-v3.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
-    withRetry('./assets/building-road-layout-v1.json', () => fetchAsset('./assets/building-road-layout-v1.json')),
+    withRetry('./assets/buildings/street-layout-v1.json', () => fetchAsset('./assets/buildings/street-layout-v1.json')),
     withRetry('./assets/traffic-lanes-v1.json', () => fetchAsset('./assets/traffic-lanes-v1.json')),
-    withRetry('./assets/roadside-props-v1.json', () => fetchAsset('./assets/roadside-props-v1.json'))
+    withRetry('./assets/buildings/street-props-v1.json', () => fetchAsset('./assets/buildings/street-props-v1.json')),
+    withRetry('./assets/buildings/street-buildings-v1.json', () => fetchAsset('./assets/buildings/street-buildings-v1.json')),
+    withRetry('./assets/buildings/street-buildings-v1.bin', () => fetchAsset('./assets/buildings/street-buildings-v1.bin')),
+    loadTex('./assets/buildings/street-atlas-v1.png')
   ]);
   installRoadGeometry(city, decodeRoadGeometry(roundedRoads));
   installJunctionFurniture(city, JSON.parse(new TextDecoder().decode(junctionFurniture)));
@@ -2242,10 +2246,12 @@ async function boot() {
   if (DEBUG) console.info('Lakeside:', lakeside.stats);
   const density = reduceSceneDensity(city);
   if (DEBUG) console.info('Scene density:', density);
-  // Density reduction removes a deterministic subset; the layout assets use
-  // the original names, so apply them after the removal without requiring the
-  // full FBX to remain in memory.
-  const buildingStats = installBuildingRoadLayout(city, JSON.parse(new TextDecoder().decode(buildingLayout)));
+  // Replace every original building, including the old lakeside landmark.
+  // Each shared variant has its entrance along +Z; offline placements rotate
+  // that axis toward its street and leave one clear row of frontages.
+  const buildingStats = installStreetBuildings(city,
+    decodeStreetBuildings(buildingMeshes, JSON.parse(new TextDecoder().decode(buildingManifest))),
+    streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
   if (DEBUG) console.info('Roadside buildings:', buildingStats);
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
 

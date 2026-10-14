@@ -5,6 +5,7 @@ import { loadCity } from './load-city.mjs';
 import { buildRoundedJunctions } from '../rounded-junctions.js';
 import { installRoadGeometry,decodeRoadGeometry,installJunctionFurniture } from '../road-geometry.js';
 import { installBuildingRoadLayout } from '../building-road-layout.js';
+import { installTestBuildings } from './install-test-buildings.mjs';
 import { createTrafficLanes } from '../traffic-lanes.js';
 import { createRoadQuery } from './road-plan-utils.mjs';
 import { installTestTerrain } from './install-test-terrain.mjs';
@@ -22,9 +23,8 @@ const bytes=fs.readFileSync('assets/roads-rounded-v8.bin');
 installRoadGeometry(city,decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)));
 installTestTerrain(city);installJunctionFurniture(city,read('junction-furniture-v3.json'));
 createLakeside(city);reduceSceneDensity(city);
-const placements=read('building-road-layout-v1.json');
-assert.equal(installBuildingRoadLayout(city,placements).applied,275);
-installBuildingRoadLayout(city,read('roadside-props-v1.json'));
+const {placements,stats}=installTestBuildings(city);
+assert.deepEqual(stats,{removed:276,installed:276,variants:21});
 raiseGrassLevel(city);replaceStylizedTrees(city,{trunkAsset:await loadTestTrunk()});roundSceneRocks(city);
 const world=createCollisionWorld(city,center),lanes=createTrafficLanes(read('traffic-lanes-v1.json'),center);
 assert.equal(plan.corridors.filter(c=>c.arm.half===35).length,4);
@@ -49,6 +49,10 @@ for(const path of lanes.paths) {
 let buildingChecks=0,buildingIntrusions=[];
 for(const item of placements) {
   const m=city.getObjectByName(item.name),pos=m.geometry.attributes.position;
+  const pivot=m.getWorldPosition(new T.Vector3()),up=pivot.clone().normalize();
+  const forward=new T.Vector3(0,0,1).transformDirection(m.matrixWorld);
+  const roadward=plan.corridors[item.corridor].at(item.s,0,600).sub(pivot).projectOnPlane(up).normalize();
+  assert.ok(forward.dot(roadward)>.9999,'Every entrance facade must face its street');
   for(let i=0;i<pos.count;i++) {
     const v=new T.Vector3().fromBufferAttribute(pos,i).applyMatrix4(m.matrixWorld);
     if(query(v,true)||lakeMetric(v)<1.1){buildingIntrusions.push(item.name);break;}
