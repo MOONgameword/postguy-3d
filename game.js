@@ -151,7 +151,7 @@ scene.add(sun, sun.target);
 const atmosphere = createAtmosphere(scene, renderer, sun, hemisphere, ambient);
 const updateSeeds = createDriftingSeeds(scene, IS_MOBILE ? 20 : 42);
 let scenicView = new URLSearchParams(location.search).has('scenic');
-let evening = false;
+document.documentElement.dataset.light = 'day';
 let lakeside = null;
 let introPreview = !DEBUG && !/(?:\?|&)(?:selftest|cartest|footest)(?:&|$)/.test(location.search);
 
@@ -1642,21 +1642,29 @@ document.querySelectorAll('.bbtn').forEach(b => b.addEventListener('keydown', e 
 }));
 $('pClose').onclick = () => $('mask').classList.remove('on');
 $('btnGear').onclick = () => toast('Demo 版本 · 送信赚金币升级');
+function syncMapView() {
+  for (const id of ['mini', 'mapLocation']) {
+    const target = $(id);
+    target.setAttribute('aria-pressed', String(scenicView));
+    target.setAttribute('aria-label', scenicView ? '返回骑行视角' : '星球远眺');
+    target.title = scenicView ? '再次点击地图：返回骑行视角' : '点击地图：星球远眺';
+  }
+}
 function toggleView() {
   scenicView = !scenicView;
-  $('btnView').setAttribute('aria-pressed', String(scenicView));
-  $('btnView').textContent = scenicView ? '↙ 返回骑行' : '◎ 星球远眺';
+  joystick.reset();
+  syncMapView();
 }
-function toggleLight() {
-  evening = !evening;
-  atmosphere.setTheme(evening ? 'evening' : 'day');
-  $('btnLight').setAttribute('aria-pressed', String(evening));
-  $('btnLight').textContent = evening ? '☾ 黄昏' : '☀ 晴日';
-  document.documentElement.dataset.light = evening ? 'evening' : 'day';
+for (const id of ['mini', 'mapLocation']) {
+  const target = $(id);
+  target.addEventListener('click', toggleView);
+  target.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); e.stopPropagation();
+    if (!e.repeat) toggleView();
+  });
 }
-$('btnView').onclick = toggleView;
-$('btnLight').onclick = toggleLight;
-$('btnGear').onclick = () => toast(IS_MOBILE ? '左侧空白处拖动移动 · 右侧油门/刹车 · 下车步行' : 'V 切换远眺 · H 收起界面 · 晴日 / 黄昏可切换');
+$('btnGear').onclick = () => toast(IS_MOBILE ? '点击右上角地图切换远眺 · 左侧拖动移动 · 右侧油门/刹车' : '点击地图或按 V 切换远眺 · H 收起界面');
 $('btnQuiet').onclick = () => {
   joystick.reset();
   const quiet = document.body.classList.toggle('quiet');
@@ -1668,10 +1676,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyV') toggleView();
   if (e.code === 'KeyH') $('btnQuiet').click();
 });
-if (scenicView) {
-  $('btnView').setAttribute('aria-pressed', 'true');
-  $('btnView').textContent = '↙ 返回骑行';
-}
+syncMapView();
 document.querySelector('.taskbar').addEventListener('click', () =>
   document.querySelector('.bbtn[data-panel="task"]').click());
 document.querySelectorAll('.res .plus').forEach(p => p.addEventListener('click', e => {

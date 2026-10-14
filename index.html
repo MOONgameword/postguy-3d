@@ -221,7 +221,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   .brake.img { width:50px; height:50px; right:88px; bottom:28px; }
 }
 </style>
-<link rel="stylesheet" href="./postcard.css?v=20260930-24">
+<link rel="stylesheet" href="./postcard.css?v=20261014-02">
 <script type="importmap">
 { "imports": {
   "three": "./vendor/three.module.js",
@@ -259,8 +259,8 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
       <div class="tasktxt"><b id="taskTitle">新的信件</b><span id="taskDesc">去红色邮箱领取下一封信</span></div>
       <div class="taskarrow">›</div></div>
 
-    <canvas id="mini" width="192" height="192"></canvas>
-    <div class="compass"><span class="arw" id="arw">➤</span><span id="dist">-- m</span></div>
+    <canvas id="mini" width="192" height="192" role="button" tabindex="0" aria-label="星球远眺" aria-pressed="false" title="点击地图：星球远眺"></canvas>
+    <div class="compass" id="mapLocation" role="button" tabindex="0" aria-label="星球远眺" aria-pressed="false" title="点击坐标：星球远眺"><span class="arw" id="arw">➤</span><span id="dist">-- m</span></div>
 
     <div class="speed">速度<br><b id="spd">0</b> km/h</div>
     <div class="hint" id="hint">左摇杆转向 · 右侧油门/刹车</div>
@@ -281,11 +281,6 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
            onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
       <div class="bbtn" data-panel="shop" role="button" tabindex="0" aria-label="商店"><em>⌂</em><span>商店</span><img src="./assets/ui/btn-shop.png" alt=""
            onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
-    </div>
-    <div class="view-controls" aria-label="风景设置">
-      <button id="btnLight" aria-pressed="false">☀ 晴日</button>
-      <span></span>
-      <button id="btnView" aria-pressed="false">◎ 星球远眺</button>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -318,6 +313,6 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   if (location.protocol === 'file:') show('请用本地服务器打开：\n在 postman-3d 目录运行 serve.ps1，\n然后访问 http://localhost:8130/');
 })();
 </script>
-<script type="module" src="./game.js?v=20261014-01"></script>
+<script type="module" src="./game.js?v=20261014-02"></script>
 </body>
 </html>

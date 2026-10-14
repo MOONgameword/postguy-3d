@@ -34,12 +34,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   border:4px solid rgba(244,239,222,.85); box-shadow:var(--shadow); filter:saturate(.5) sepia(.15); }
 .compass { top:190px; right:24px; width:104px; color:var(--ink); text-shadow:0 1px 6px #f3ecdb; }
 .compass .arw { font-size:20px; }
-.view-controls { position:absolute; left:50%; top:24px; transform:translateX(-50%); display:flex;
-  align-items:center; gap:4px; padding:5px; border-radius:25px; background:var(--glass);
-  border:1px solid rgba(255,255,255,.5); box-shadow:var(--shadow); white-space:nowrap; }
-.view-controls button { border:0; background:none; color:#5d6b57; font-size:11px; padding:8px 13px; border-radius:19px; }
-.view-controls button[aria-pressed=true] { background:#526a58; color:#f6f0df; }
-.view-controls > span { height:14px; width:1px; background:var(--line); }
 #btnQuiet { position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
   background:rgba(244,239,223,.8); border:1px solid var(--line); border-radius:20px; padding:6px 13px;
   color:#65715e; font-size:10px; letter-spacing:1px; z-index:4; }
@@ -107,7 +101,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .tasktxt span { max-width:175px; font-size:9px; }.taskarrow { display:none; }
   #mini { top:94px; right:16px; width:82px; height:82px; }
   .compass { top:185px; right:16px; width:82px; }
-  .view-controls { top:calc(82px + env(safe-area-inset-top)); bottom:auto; }
   .taskbar, #mini { top:calc(146px + env(safe-area-inset-top)); }
   .compass { top:calc(236px + env(safe-area-inset-top)); }
   .bottom { bottom:30px; }.bbtn,.bbtn.img { width:75px; height:30px; }
@@ -127,7 +120,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .pname { font-size:15px; }.edition { display:none; }
   .taskbar { top:67px; left:16px; padding:7px 10px; }.tasktxt span { display:none; }
   #mini { top:62px; width:72px; height:72px; right:16px; }.compass { top:139px; right:16px; width:72px; }
-  .view-controls { top:14px; }.view-controls button { padding:6px 10px; font-size:10px; }
   .bottom { bottom:36px; padding:4px 8px; }.bbtn,.bbtn.img { width:72px; height:30px; }
   #btnQuiet { bottom:8px; font-size:9px; padding:3px 10px; }
   .stick { bottom:18px; width:72px; height:72px; }.hint { bottom:99px; font-size:8px; }
@@ -156,7 +148,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 .mobile-ui .tasktxt span { font-size:12px; }
 .mobile-ui .bbtn,.mobile-ui .bbtn.img { width:86px; height:48px; padding:0 6px; }
 .mobile-ui .bbtn span,.mobile-ui .bbtn.img span { font-size:14px; }
-.mobile-ui .view-controls button { min-height:44px; font-size:14px; padding:8px 12px; }
 .mobile-ui #btnQuiet { min-height:44px; font-size:12px; padding:8px 14px; }
 .mobile-ui .gas,.mobile-ui .gas.img { width:84px; height:84px; font-size:17px; right:max(14px,env(safe-area-inset-right)); }
 .mobile-ui .brake,.mobile-ui .brake.img { width:66px; height:66px; font-size:16px; right:112px; }
@@ -174,7 +165,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .mobile-ui .gas,.mobile-ui .gas.img { bottom:calc(125px + env(safe-area-inset-bottom)); }
   .mobile-ui .brake,.mobile-ui .brake.img { bottom:calc(134px + env(safe-area-inset-bottom)); }
   .mobile-ui #btnRide { bottom:calc(222px + env(safe-area-inset-bottom)); }
-  .mobile-ui .view-controls { top:calc(82px + env(safe-area-inset-top)); bottom:auto; }
   .mobile-ui .speed { bottom:calc(228px + env(safe-area-inset-bottom)); left:20px; }
   .mobile-ui .taskbar { top:calc(146px + env(safe-area-inset-top)); left:12px; max-width:calc(100% - 118px); }
   .mobile-ui #mini { right:12px; top:calc(146px + env(safe-area-inset-top)); }
@@ -184,7 +174,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .mobile-ui .panel .cell { aspect-ratio:auto; min-height:64px; }
   .mobile-ui .avatar { width:40px; height:40px; }
   .mobile-ui .edition { display:none; }
-  .mobile-ui .view-controls { top:max(8px,env(safe-area-inset-top)); padding:2px; }
   .mobile-ui .bottom { bottom:calc(8px + env(safe-area-inset-bottom)); padding:4px 6px; }
   .mobile-ui #btnQuiet { bottom:calc(68px + env(safe-area-inset-bottom)); }
   .mobile-ui .gas,.mobile-ui .gas.img { bottom:calc(14px + env(safe-area-inset-bottom)); }
@@ -196,7 +185,6 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .mobile-ui .compass { top:148px; right:12px; width:76px; }
 }
 @media (orientation:landscape) and (max-width:700px) {
-  .mobile-ui .view-controls { top:65px; }
   .mobile-ui .bottom { left:43%; }
   .mobile-ui .bbtn,.mobile-ui .bbtn.img { width:68px; }
   .mobile-ui .bbtn em { display:none; }
@@ -209,3 +197,8 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .mobile-ui .lvbar { width:60px; }
   .mobile-ui .res { padding:4px 6px; }
 }
+
+/* The minimap and coordinate marker share the overview toggle. */
+#mini, #mapLocation { cursor:pointer; touch-action:manipulation; }
+#mini[aria-pressed=true] { border-color:#557b68; box-shadow:0 0 0 2px rgba(244,239,222,.85),var(--shadow); }
+#mapLocation[aria-pressed=true] { color:#375c43; }
