@@ -19,9 +19,9 @@ import { roundSceneRocks } from '../rounded-rocks.js';
 
 const read=n=>JSON.parse(fs.readFileSync('assets/'+n));
 const {city,road,center}=loadCity(),plan=buildRoundedJunctions(road),query=createRoadQuery(plan);
-const bytes=fs.readFileSync('assets/roads-rounded-v9.bin');
+const bytes=fs.readFileSync('assets/roads-rounded-v10.bin');
 installRoadGeometry(city,decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)));
-installTestTerrain(city);installJunctionFurniture(city,read('junction-furniture-v3.json'));
+installTestTerrain(city);installJunctionFurniture(city,read('junction-furniture-v4.json'));
 createLakeside(city);reduceSceneDensity(city);
 const {placements,stats}=installTestBuildings(city);
 assert.deepEqual(stats,{removed:276,installed:276,variants:21});
@@ -45,22 +45,32 @@ for(const path of lanes.paths) {
     samples++;
   }
 }
-// Check all building vertices, including roofs/overhangs, stay off pavement.
-let buildingChecks=0,buildingIntrusions=[];
+// Foundations must touch the curb without blocking pedestrians. Upper awnings
+// may project over the sidewalk; every vertex must still stay off the asphalt.
+let buildingChecks=0,buildingIntrusions=[],frontageGaps=[];
 for(const item of placements) {
   const m=city.getObjectByName(item.name),pos=m.geometry.attributes.position;
   const pivot=m.getWorldPosition(new T.Vector3()),up=pivot.clone().normalize();
   const forward=new T.Vector3(0,0,1).transformDirection(m.matrixWorld);
   const roadward=plan.corridors[item.corridor].at(item.s,0,600).sub(pivot).projectOnPlane(up).normalize();
   assert.ok(forward.dot(roadward)>.9999,'Every entrance facade must face its street');
+  const corridor=plan.corridors[item.corridor];
+  let frontGap=Infinity;
   for(let i=0;i<pos.count;i++) {
     const v=new T.Vector3().fromBufferAttribute(pos,i).applyMatrix4(m.matrixWorld);
-    if(query(v,true)||lakeMetric(v)<1.1){buildingIntrusions.push(item.name);break;}
+    const low=pos.getY(i)*item.scale<=5.4;
+    if(query(v,low)||lakeMetric(v)<1.1){buildingIntrusions.push(item.name);break;}
+    if(low){
+      const lateral=v.clone().normalize().dot(corridor.side)*item.sign;
+      frontGap=Math.min(frontGap,600*lateral/Math.sqrt(1-lateral*lateral)-corridor.arm.outer);
+    }
   }
+  assert.ok(frontGap>=0 && frontGap<.4, `${item.name}: foundation gap ${frontGap}`);
+  frontageGaps.push(frontGap);
   buildingChecks++;
 }
 const treeOverlaps=world.shapes.filter(s=>/^Tree_/.test(s.name)&&world.shapes.some(b=>/^Bld_/.test(b.name)&&footprintBlocked(b,s.up,2))).map(s=>s.name);
-console.log(JSON.stringify({treeOverlaps,samples,bodyChecks,buildingChecks,buildingIntrusions,obstacles:[...obstacles]},null,2));
+console.log(JSON.stringify({treeOverlaps,samples,bodyChecks,buildingChecks,buildingIntrusions,frontageGapRange:[Math.min(...frontageGaps),Math.max(...frontageGaps)],obstacles:[...obstacles]},null,2));
 assert.deepEqual(buildingIntrusions,[]);
 assert.equal(obstacles.size,0,'All lane envelopes must be clear of scene collision geometry');
 

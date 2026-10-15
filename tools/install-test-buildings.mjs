@@ -4,9 +4,9 @@ import {decodeStreetBuildings,installStreetBuildings} from '../street-buildings.
 import {installBuildingRoadLayout} from '../building-road-layout.js';
 export function installTestBuildings(city){
  const read=name=>JSON.parse(fs.readFileSync('assets/buildings/'+name));
- const placements=read('street-layout-v1.json');
+ const placements=read('street-layout-v2.json');
  const geometries=decodeStreetBuildings(fs.readFileSync('assets/buildings/street-buildings-v1.bin'),read('street-buildings-v1.json'));
  const stats=installStreetBuildings(city,geometries,new T.MeshLambertMaterial(),placements);
- installBuildingRoadLayout(city,read('street-props-v1.json'));
+ installBuildingRoadLayout(city,read('street-props-v2.json'));
  return {placements,stats,geometries};
 }

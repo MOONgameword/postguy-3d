@@ -319,11 +319,11 @@ export function buildRoundedJunctions(mesh) {
 export function relocateJunctionFurniture(city, plan) {
   const placements=[],occupied=[],candidates=[];
   for(const j of plan.junctions)for(const sector of j.sectors)
-    for(const p of plan.sectorPath(sector,sector.a.outer-2.2,sector.b.outer-2.2))
+    for(const p of plan.sectorPath(sector,sector.a.outer-3.2,sector.b.outer-3.2))
       candidates.push(plan.world(j,p,WALK));
   for(const c of plan.corridors)for(const sign of [-1,1]) {
     const n=Math.ceil((c.end-c.start)*BASE/4);
-    for(let k=0;k<=n;k++) candidates.push(c.at(c.start+(c.end-c.start)*k/n,sign*(c.arm.outer-2.2),WALK));
+    for(let k=0;k<=n;k++) candidates.push(c.at(c.start+(c.end-c.start)*k/n,sign*(c.arm.outer-3.2),WALK));
   }
   city.updateMatrixWorld(true);
   const props=[];city.traverse(o=>{if(o.isMesh&&/^Street_/.test(o.name))props.push(o);});

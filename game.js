@@ -2231,13 +2231,13 @@ async function boot() {
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
   const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas] = await Promise.all([
-    withRetry('./assets/roads-rounded-v9.bin', () => fetchAsset('./assets/roads-rounded-v9.bin')),
-    withRetry('./assets/junction-furniture-v3.json', () => fetchAsset('./assets/junction-furniture-v3.json')),
+    withRetry('./assets/roads-rounded-v10.bin', () => fetchAsset('./assets/roads-rounded-v10.bin')),
+    withRetry('./assets/junction-furniture-v4.json', () => fetchAsset('./assets/junction-furniture-v4.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
-    withRetry('./assets/buildings/street-layout-v1.json', () => fetchAsset('./assets/buildings/street-layout-v1.json')),
+    withRetry('./assets/buildings/street-layout-v2.json', () => fetchAsset('./assets/buildings/street-layout-v2.json')),
     withRetry('./assets/traffic-lanes-v1.json', () => fetchAsset('./assets/traffic-lanes-v1.json')),
-    withRetry('./assets/buildings/street-props-v1.json', () => fetchAsset('./assets/buildings/street-props-v1.json')),
+    withRetry('./assets/buildings/street-props-v2.json', () => fetchAsset('./assets/buildings/street-props-v2.json')),
     withRetry('./assets/buildings/street-buildings-v1.json', () => fetchAsset('./assets/buildings/street-buildings-v1.json')),
     withRetry('./assets/buildings/street-buildings-v1.bin', () => fetchAsset('./assets/buildings/street-buildings-v1.bin')),
     loadTex('./assets/buildings/street-atlas-v1.png')
@@ -2259,6 +2259,7 @@ async function boot() {
     streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
   if (DEBUG) console.info('Roadside buildings:', buildingStats);
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
+  if (DEBUG) console.info('Street layout release: 20261015-frontage-v2 (roads v10, lamps v4, buildings v2)');
 
   const grassLevel = raiseGrassLevel(city);
   if (DEBUG) console.info('Grass level:', grassLevel);

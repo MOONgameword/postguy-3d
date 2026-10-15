@@ -4,11 +4,12 @@ import assert from 'node:assert/strict';
 import { loadCity } from './load-city.mjs';
 import { buildRoundedJunctions } from '../rounded-junctions.js';
 import { decodeRoadGeometry, installJunctionFurniture } from '../road-geometry.js';
+import { isLegacySidewalkProp } from '../scene-density.js';
 
 const { city, road } = loadCity();
 const plan = buildRoundedJunctions(road);
 assert.deepEqual([plan.stats.junctions, plan.stats.corners, plan.stats.corridors], [10, 30, 15]);
-const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v9.bin', import.meta.url));
+const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v10.bin', import.meta.url));
 const geometry = decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 const positions = geometry.attributes.position, normals = geometry.attributes.normal;
 const sidewalkGroup=geometry.groups.find(g=>road.material[g.materialIndex].name==='City_Sidewalk');
@@ -105,11 +106,22 @@ for (let i = paint.start; i < paint.start + paint.count; i += 3 * stride) {
   minGap = Math.min(minGap, gap); maxGap = Math.max(maxGap, gap);
 }
 assert.ok(minGap > 0.010 && maxGap < 0.015, `Paint clearance ${minGap}–${maxGap}`);
-const placements = JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v3.json', import.meta.url)));
+const placements = JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v4.json', import.meta.url)));
 installJunctionFurniture(city, placements);
 assert.equal(placements.length, 336, 'All street furniture follows the lowered sidewalk');
+const outerEdgeSegments=[];
+for(const j of plan.junctions)for(const s of j.sectors){
+  const path=plan.sectorPath(s,s.a.outer,s.b.outer).map(p=>plan.world(j,p,600));
+  for(let i=1;i<path.length;i++) outerEdgeSegments.push(new THREE.Line3(path[i-1],path[i]));
+}
+for(const c of plan.corridors)for(const sign of [-1,1]){
+  const n=Math.ceil((c.end-c.start)*600/2);
+  for(let i=0;i<n;i++)outerEdgeSegments.push(new THREE.Line3(c.at(c.start+(c.end-c.start)*i/n,sign*c.arm.outer,600),c.at(c.start+(c.end-c.start)*(i+1)/n,sign*c.arm.outer,600)));
+}
+const lampInsets=[];
 for (const placement of placements) {
   const mesh = city.getObjectByName(placement.name), p = mesh.getWorldPosition(new THREE.Vector3());
+  if(isLegacySidewalkProp(mesh))continue;
   assertGround(p, sidewalk, 'Relocated ' + placement.name);
   let bottom = Infinity;
   const vertex = new THREE.Vector3();
@@ -117,7 +129,19 @@ for (const placement of placements) {
     bottom = Math.min(bottom, vertex.fromBufferAttribute(mesh.geometry.attributes.position, i).applyMatrix4(mesh.matrixWorld).length());
   }
   assert.ok(Math.abs(bottom - (602 + 2.6 / 3)) < .2, 'Furniture base must follow the new sidewalk: ' + placement.name);
+  const base=[];
+  for(let i=0;i<mesh.geometry.attributes.position.count;i++){
+    const v=new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position,i).applyMatrix4(mesh.matrixWorld);
+    if(v.length()<bottom+.2){assertGround(v,sidewalk,'Lamp base on paving '+placement.name);base.push(v);}
+  }
+  assert.ok(base.length);
+  const centre=base.reduce((v,p)=>v.add(p),new THREE.Vector3()).divideScalar(base.length).setLength(600);
+  const closest=new THREE.Vector3();
+  const inset=Math.min(...outerEdgeSegments.map(edge=>edge.closestPointToPoint(centre,true,closest).distanceTo(centre)));
+  assert.ok(inset>2.5&&inset<3.8,`${placement.name}: lamp inset ${inset}`);
+  lampInsets.push(inset);
 }
+assert.equal(lampInsets.length,168);
 console.log(JSON.stringify({ junctions: 10, roundedCorners: 30, corridors: 15, checkedFaces,
   reversed, invalid, roadChecks, walkChecks, minPaintGap: minGap, maxPaintGap: maxGap,
-  relocatedFurniture: placements.length, mappedCurbTriangles, heightChecks, grassCurbChecks, result: 'PASS' }, null, 2));
+  relocatedFurniture: placements.length, lampInsetRange:[Math.min(...lampInsets),Math.max(...lampInsets)], mappedCurbTriangles, heightChecks, grassCurbChecks, result: 'PASS' }, null, 2));

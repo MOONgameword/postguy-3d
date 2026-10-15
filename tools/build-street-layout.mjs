@@ -13,7 +13,7 @@ import {decodeStreetBuildings,installStreetBuildings} from '../street-buildings.
 const read=p=>JSON.parse(fs.readFileSync(p));
 const {city,road}=loadCity(),plan=buildRoundedJunctions(road),onRoad=createRoadQuery(plan);
 installTestTerrain(city);createLakeside(city);
-installJunctionFurniture(city,read('assets/junction-furniture-v3.json'));
+installJunctionFurniture(city,read('assets/junction-furniture-v4.json'));
 reduceSceneDensity(city);
 installBuildingRoadLayout(city,read('assets/building-road-layout-v1.json'));
 const manifest=read('assets/buildings/street-buildings-v1.json');
@@ -22,14 +22,20 @@ city.updateMatrixWorld(true);
 const buildings=[];city.traverse(m=>{if(m.isMesh&&/^Bld_/.test(m.name))buildings.push({name:m.name,original:m.getWorldPosition(new T.Vector3())})});
 buildings.sort((a,b)=>a.name.localeCompare(b.name));
 buildings.forEach((b,i)=>{b.variant=i%21;b.scale=3.8;b.rx=manifest.variants[b.variant].size[0]*b.scale/2;b.ry=manifest.variants[b.variant].size[2]*b.scale/2;b.diag=Math.hypot(b.rx,b.ry);b.name='Bld_Street_'+String(i).padStart(4,'0')});
+for(const b of buildings) {
+ const pos=geometries[b.variant].attributes.position;
+ b.front=-Infinity;
+ for(let i=0;i<pos.count;i++) if(pos.getY(i)*b.scale<=5.4)
+  b.front=Math.max(b.front,pos.getZ(i)*b.scale);
+}
 const terrain=city.getObjectByName('Planet');terrain.material=new T.MeshBasicMaterial({side:T.DoubleSide});
 const occupied=[],placements=[],failures=[],ray=new T.Raycaster(),temp=new T.Vector3();
 for(const b of buildings.slice().sort((a,b)=>b.diag-a.diag||a.name.localeCompare(b.name))){
  const candidates=[];
  for(const [ci,c] of plan.corridors.entries())for(const sign of [-1,1]){
-  // Keep the building frontage just beyond the grass-side curb. The old
-  // three-unit buffer made the narrow sidewalk read as an empty strip.
-  const offset=c.arm.outer+0.8+b.ry,margin=(b.rx+8)/600;
+  // Align the actual foundation/entrance, not a roof-inclusive bounding box.
+  // Add tangent angles so the front edge follows the spherical street edge.
+  const offset=600*Math.tan(Math.atan((c.arm.outer+.15)/600)+Math.atan(b.front/600)),margin=(b.rx+8)/600;
   for(let s=c.start+margin;s<c.end-margin;s+=5/600){
    const p=c.at(s,sign*offset,600);candidates.push({p,s,sign,c,ci,score:p.distanceToSquared(b.original)});
   }
@@ -40,7 +46,7 @@ for(const b of buildings.slice().sort((a,b)=>b.diag-a.diag||a.name.localeCompare
   const {p,c,s}=cand,up=p.clone().normalize();if(lakeMetric(p)<1.4)continue;
   const forward=c.at(s,0,600).sub(p).projectOnPlane(up).normalize();
   const right=new T.Vector3().crossVectors(up,forward).normalize();
-  const corners=[];for(const x of [-b.rx,0,b.rx])for(const z of [-b.ry,0,b.ry])corners.push(p.clone().addScaledVector(right,x).addScaledVector(forward,z));
+  const corners=[];for(const x of [-b.rx,0,b.rx])for(const z of [-b.ry,0,b.front])corners.push(p.clone().addScaledVector(right,x).addScaledVector(forward,z));
   if(corners.some(q=>onRoad(q,true)||lakeMetric(q)<1.25))continue;
   if(occupied.some(o=>{const d=o.p.clone().sub(p);if(d.length()>b.diag+o.diag+4)return false;return [right,forward,o.right,o.forward].every(axis=>Math.abs(d.dot(axis))<b.rx*Math.abs(right.dot(axis))+b.ry*Math.abs(forward.dot(axis))+o.rx*Math.abs(o.right.dot(axis))+o.ry*Math.abs(o.forward.dot(axis))+3)}))continue;
   ray.set(up.clone().multiplyScalar(900),up.clone().negate());const hit=ray.intersectObject(terrain,false)[0];if(!hit||hit.point.length()>605)continue;
@@ -79,6 +85,6 @@ for(const shape of colliders){
  matrix.premultiply(mesh.parent.matrixWorld.clone().invert());const pos=new T.Vector3(),quat=new T.Quaternion(),scale=new T.Vector3();matrix.decompose(pos,quat,scale);
  adjustments.push({name:shape.name,position:pos.toArray(),quaternion:quat.toArray(),scale:scale.toArray(),up:target.clone().normalize().toArray()});
 }
-fs.writeFileSync('assets/buildings/street-layout-v1.json',JSON.stringify(placements));
-fs.writeFileSync('assets/buildings/street-props-v1.json',JSON.stringify(adjustments));
+fs.writeFileSync('assets/buildings/street-layout-v2.json',JSON.stringify(placements));
+fs.writeFileSync('assets/buildings/street-props-v2.json',JSON.stringify(adjustments));
 console.log('Relocated landscape props:',adjustments.length);

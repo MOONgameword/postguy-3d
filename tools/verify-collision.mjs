@@ -79,7 +79,7 @@ let cases=0;
 }
 const {city,road,center}=loadCity();
 const plan=buildRoundedJunctions(road);
-installJunctionFurniture(city,JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v3.json',import.meta.url))));
+installJunctionFurniture(city,JSON.parse(fs.readFileSync(new URL('../assets/junction-furniture-v4.json',import.meta.url))));
 installTestTerrain(city);createLakeside(city);
 reduceSceneDensity(city);
 installTestBuildings(city);
