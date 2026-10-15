@@ -72,7 +72,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
       outgoingLight += vec3(.035,.055,.009) * nap * meadowCover;
       #include <opaque_fragment>`);
   };
-  material.customProgramCacheKey = () => `planet-surface-v2-${grass ? 'grass' : 'stone'}`;
+  material.customProgramCacheKey = () => `planet-surface-v3-${grass ? 'grass' : 'stone'}`;
   return material;
 }
 

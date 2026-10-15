@@ -10,7 +10,7 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261014-01';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261015-surfaces-v2';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
@@ -575,7 +575,7 @@ function coinPop(gain) {
      2. 下载失败退避重试 —— 手机弱网下断一次不至于整局白费              */
 const loader = new FBXLoader();
 
-const CACHE_NAME = 'postman-assets-v5';
+const CACHE_NAME = 'postman-assets-v6';
 const NOCACHE = /(\?|&)nocache/.test(location.search);
 let assetCache;
 
