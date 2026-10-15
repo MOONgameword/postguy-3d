@@ -27,4 +27,14 @@ fs.writeFileSync(new URL('../assets/roads-rounded-v12.bin',import.meta.url),comp
 const info={...result.stats,junctionCount:result.stats.junctions,paint:painted,vertices:count,bytes:array.byteLength,compressedBytes:compressed.length,junctions:result.junctions.map((j,index)=>({index,position:j.up.clone().multiplyScalar(602).toArray(),arms:j.arms.length,cuts:j.arms.map(a=>a.cut),gaps:j.sectors.map(s=>s.gap*180/Math.PI)}))};
 fs.writeFileSync(new URL('../assets/rounded-road-report-v12.json',import.meta.url),JSON.stringify(info,null,2));
 fs.writeFileSync(new URL('../assets/crosswalk-report-v12.json',import.meta.url),JSON.stringify(result.crosswalks,null,2));
+const signalRadius=602.8666667, signals=[];
+for(const crossing of result.crosswalks){
+  const corridor=result.corridors[crossing.corridor], mid=(crossing.from+crossing.to)/2;
+  for(const sign of [-1,1]){
+    const position=corridor.at(mid,sign*(crossing.width+5.2),signalRadius);
+    const roadward=corridor.side.clone().multiplyScalar(-sign).normalize();
+    signals.push({position:position.toArray(),roadward:roadward.toArray(),corridor:crossing.corridor,junction:crossing.junction});
+  }
+}
+fs.writeFileSync(new URL('../assets/crosswalk-signals-v1.json',import.meta.url),JSON.stringify(signals,null,2));
 console.log('SAVED',count,'vertices',array.byteLength,'bytes',compressed.length,'compressed bytes');

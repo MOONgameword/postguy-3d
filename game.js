@@ -16,7 +16,7 @@ import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
-import { installStreetComponents } from './street-components.js?v=20261015-street-kit';
+import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v2';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
@@ -286,8 +286,8 @@ function bakeHullNormals(geo) {
 }
 
 const vScale = new THREE.Vector3();
-function addOutline(root, world = 0.03) {
-  if (!OUTLINE) return;
+function addOutline(root, world = 0.03, force = false) {
+  if (!OUTLINE && !force) return;
   const list = [];
   root.traverse(o => { if (o.isMesh && !o.userData.__outline && !o.userData.surfaceInk) list.push(o); });
   for (const o of list) {
@@ -2240,7 +2240,7 @@ async function boot() {
   setProgress(0.52, '测量星球…');
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
-  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas] = await Promise.all([
+  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas, crosswalkSignals] = await Promise.all([
     withRetry('./assets/roads-rounded-v12.bin', () => fetchAsset('./assets/roads-rounded-v12.bin')),
     withRetry('./assets/junction-furniture-v4.json', () => fetchAsset('./assets/junction-furniture-v4.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
@@ -2250,7 +2250,8 @@ async function boot() {
     withRetry('./assets/buildings/street-props-v2.json', () => fetchAsset('./assets/buildings/street-props-v2.json')),
     withRetry('./assets/buildings/street-buildings-v1.json', () => fetchAsset('./assets/buildings/street-buildings-v1.json')),
     withRetry('./assets/buildings/street-buildings-v1.bin', () => fetchAsset('./assets/buildings/street-buildings-v1.bin')),
-    loadTex('./assets/buildings/street-atlas-v1.png')
+    loadTex('./assets/buildings/street-atlas-v1.png'),
+    withRetry('./assets/crosswalk-signals-v1.json', () => fetchAsset('./assets/crosswalk-signals-v1.json'))
   ]);
   installRoadGeometry(city, decodeRoadGeometry(roundedRoads));
   installJunctionFurniture(city, JSON.parse(new TextDecoder().decode(junctionFurniture)));
@@ -2277,6 +2278,7 @@ async function boot() {
     radius: 602 + (604.6 - 602) / 3,
     scale: 3,
     toonify,
+    crosswalkSignals: JSON.parse(new TextDecoder().decode(crosswalkSignals)),
     mobile: IS_MOBILE
   });
   if (DEBUG) console.info('Street components:', streetKitStats);
@@ -2326,8 +2328,13 @@ async function boot() {
   });
   /* 减少场景物件后再创建描边；地表本身不能描边，避免包住整个星球。 */
   const inked = [];
-  city.traverse(o => { if (o.isMesh && !TERRAIN.test(o.name) && !/^Grass/i.test(o.name) && !o.userData.stylizedTree) inked.push(o); });
+  const isStreetComponent = o => { for (let p = o; p; p = p.parent) if (p.userData.streetComponent) return true; return false; };
+  city.traverse(o => { if (o.isMesh && !isStreetComponent(o) && !TERRAIN.test(o.name) && !/^Grass/i.test(o.name) && !o.userData.stylizedTree) inked.push(o); });
   for (const o of inked) addOutline(o, 0.015 * S);
+  // Street-kit components are outlined even when the optional global outline
+  // debug flag is off; their small shells keep the authored kit readable.
+  const streetComponents = city.getObjectByName('StreetComponents_14_Source');
+  if (streetComponents) addOutline(streetComponents, 0.015 * S, true);
   /* 地平线剔除要在描边之后建表：它顺手记下每个物体的描边壳，好按距离单独关掉 */
   prepareHorizon(city);
   await new Promise(r => setTimeout(r, 16));

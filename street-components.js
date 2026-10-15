@@ -26,11 +26,15 @@ function sidewalkFrame(lamp, radius) {
     .addScaledVector(up, -new THREE.Vector3(1, 0, 0).applyQuaternion(q).dot(up));
   if (tangent.lengthSq() < 1e-8) tangent.set(0, 1, 0).cross(up);
   tangent.normalize();
-  return { up, tangent, base: up.clone().multiplyScalar(radius) };
+  // The replacement lamp's source X axis is the arm/head direction.  The
+  // old sidewalk anchors have their tangent oriented consistently, so the
+  // road is on the negative tangent×up side of every anchor.
+  const roadward = new THREE.Vector3().crossVectors(tangent, up).normalize().negate();
+  return { up, tangent, roadward, base: up.clone().multiplyScalar(radius) };
 }
 
-function orient(root, frame, offset = 0, scale = 1) {
-  const x = frame.tangent.clone();
+function orient(root, frame, offset = 0, scale = 1, faceRoad = false) {
+  const x = (faceRoad ? frame.roadward : frame.tangent).clone();
   const y = frame.up.clone();
   const z = new THREE.Vector3().crossVectors(x, y).normalize();
   root.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
@@ -76,6 +80,7 @@ export function installStreetComponents(city, source, {
   toonify,
   addOutline,
   outline = .015,
+  crosswalkSignals = [],
   mobile = false
 } = {}) {
   city.updateMatrixWorld(true);
@@ -99,11 +104,11 @@ export function installStreetComponents(city, source, {
   city.add(root);
 
   const placed = [];
-  const add = (id, frame, offset = 0, factor = 1) => {
+  const add = (id, frame, offset = 0, factor = 1, faceRoad = false) => {
     const item = templates.get(id)?.clone(true);
     if (!item) return;
     item.name = `StreetComponent_${id}_${placed.length}`;
-    orient(item, frame, offset, scale * factor);
+    orient(item, frame, offset, scale * factor, faceRoad);
     item.userData.streetComponent = true;
     root.add(item);
     toonify?.(item, { palette: false, castShadow: !mobile });
@@ -113,12 +118,24 @@ export function installStreetComponents(city, source, {
 
   // Four-lane lighting is replaced one-for-one, preserving the existing
   // sidewalk coverage and the lamp-to-road orientation.
-  for (const frame of anchors) add('04', frame, 0, .98);
+  // The request is a 50% enlargement: keep the authored proportions and
+  // multiply the lamp instance scale by 1.5.
+  for (const frame of anchors) add('04', frame, 0, .98 * 1.5, true);
+
+  // Put one pedestrian signal on each sidewalk side of every reported
+  // crosswalk.  These placements are generated from the same road plan as
+  // the baked stripes, so they do not drift when the road is rebuilt.
+  for (const placement of crosswalkSignals) {
+    const up = new THREE.Vector3().fromArray(placement.position).normalize();
+    const roadward = new THREE.Vector3().fromArray(placement.roadward)
+      .addScaledVector(up, -new THREE.Vector3().fromArray(placement.roadward).dot(up)).normalize();
+    add('03', { up, tangent: roadward, roadward, base: up.clone().multiplyScalar(radius) }, 0, 1, true);
+  }
 
   // Small deterministic counts keep the authored street kit visible without
   // recreating the old dense sidewalk clutter. Wider barriers/planters get a
   // tangent offset so their footprint stays inside the paving band.
-  const counts = { '01': 4, '02': 4, '03': 4, '05': 4, '06': 4, '07': 4,
+  const counts = { '01': 4, '02': 4, '05': 4, '06': 4, '07': 4,
     '08': 4, '09': 8, '10': 4, '11': 4, '12': 4, '13': 8, '14': 10 };
   let seed = 7;
   for (const id of Object.keys(counts)) {
