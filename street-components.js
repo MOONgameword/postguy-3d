@@ -164,8 +164,9 @@ export function installStreetComponents(city, source, {
     const frame = { up, tangent, roadward, base: up.clone().multiplyScalar(radius) };
     add('03', frame, 0, 1, 'front');
     // The horizontal traffic signal sits a short distance along the frontage
-    // so it reads as a separate pole at the same crosswalk edge.
-    add('02', frame, 2.5, 1, 'front');
+    // so it reads as a separate pole at the same crosswalk edge. Keep one on
+    // the left-hand sidewalk side of each crossing, as in the reference.
+    if (placement.side === -1) add('02', frame, 2.5, 1, 'front');
   }
 
   // Small deterministic counts keep the authored street kit visible without

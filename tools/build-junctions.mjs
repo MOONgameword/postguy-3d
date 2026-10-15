@@ -34,7 +34,7 @@ for(const crossing of result.crosswalks){
     const position=corridor.at(mid,sign*(crossing.width+5.2),signalRadius);
     const roadward=corridor.side.clone().multiplyScalar(-sign).normalize();
     const tangent=corridor.arm.direction.clone().addScaledVector(position.clone().normalize(),-corridor.arm.direction.dot(position.clone().normalize())).normalize();
-    signals.push({position:position.toArray(),roadward:roadward.toArray(),tangent:tangent.toArray(),corridor:crossing.corridor,junction:crossing.junction});
+    signals.push({position:position.toArray(),roadward:roadward.toArray(),tangent:tangent.toArray(),side:sign,corridor:crossing.corridor,junction:crossing.junction});
   }
 }
 fs.writeFileSync(new URL('../assets/crosswalk-signals-v1.json',import.meta.url),JSON.stringify(signals,null,2));
