@@ -72,7 +72,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
       outgoingLight += vec3(.035,.055,.009) * nap * meadowCover;
       #include <opaque_fragment>`);
   };
-  material.customProgramCacheKey = () => `planet-surface-v3-${grass ? 'grass' : 'stone'}`;
+  material.customProgramCacheKey = () => `planet-surface-v4-${grass ? 'grass' : 'stone'}`;
   return material;
 }
 
@@ -103,10 +103,10 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     City_Grass: surfaceMaterial('City_Grass', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Meadow: surfaceMaterial('City_Meadow', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Road: surfaceMaterial('City_Road', asphalt.base, asphalt.detail, { color: 0xc2c4be, period: 12, strength: .16 }),
-    City_Sidewalk: surfaceMaterial('City_Sidewalk', pavers.base, pavers.detail, { color: 0xe4e1d0, period: 12, strength: .24 }),
+    City_Sidewalk: surfaceMaterial('City_Sidewalk', pavers.base, pavers.detail, { color: 0xd0d3cf, period: 10, strength: .30 }),
     // A low-poly guidance strip gets its raised-dot/line relief entirely from
     // the detail normal map; it does not add a separate modeled curb.
-    City_Tactile: surfaceMaterial('City_Tactile', tactile.base, tactile.detail, { color: 0xf0d49b, period: 2.2, strength: .42 }),
+    City_Tactile: surfaceMaterial('City_Tactile', tactile.base, tactile.detail, { color: 0xe6bd69, period: 2.2, strength: .52 }),
     City_Curb: new THREE.MeshStandardMaterial({
       name: 'City_Curb', map: curb.base, normalMap: curb.detail,
       normalScale: new THREE.Vector2(.22, .22), color: 0xffffff,
