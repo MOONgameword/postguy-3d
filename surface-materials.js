@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
-// World-space triplanar mapping does not depend on the FBX palette UVs or the
-// rounded road mesh's empty UVs. It remains continuous around the whole planet.
+// Terrain and asphalt have no directional pattern, so world-space triplanar
+// mapping keeps them continuous around the planet. Paving uses road-following UVs.
 function surfaceMaterial(name, base, detail, { color, period, strength, grass = false, nap = null }) {
   const material = new THREE.MeshStandardMaterial({
     name, color, roughness: 1, metalness: 0, side: THREE.DoubleSide
@@ -77,7 +77,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
 }
 
 export async function installSurfaceMaterials(city, renderer, loadTexture) {
-  const kinds = ['grass-v2', 'asphalt', 'pavers', 'curb-v1', 'tactile'];
+  const kinds = ['grass-v2', 'asphalt', 'pavers-v2', 'curb-v2', 'tactile-v2'];
   const textures = await Promise.all(kinds.map(async kind => {
     const [base, detail] = await Promise.all(['base', 'detail'].map(channel =>
       loadTexture(`./assets/surfaces/${kind}-${channel}-512.webp`)));
@@ -99,20 +99,20 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
   nap.minFilter = THREE.LinearMipmapLinearFilter;
   nap.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   nap.needsUpdate = true;
+  const pavingMaterial = (name, textures, strength) => new THREE.MeshStandardMaterial({
+    name, map: textures.base, normalMap: textures.detail,
+    normalScale: new THREE.Vector2(strength, strength), color: 0xffffff,
+    roughness: .92, metalness: 0, side: THREE.DoubleSide
+  });
   const replacements = {
     City_Grass: surfaceMaterial('City_Grass', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Meadow: surfaceMaterial('City_Meadow', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Road: surfaceMaterial('City_Road', asphalt.base, asphalt.detail, { color: 0xc2c4be, period: 12, strength: .16 }),
-    City_Sidewalk: surfaceMaterial('City_Sidewalk', pavers.base, pavers.detail, { color: 0xd0d3cf, period: 10, strength: .30 }),
-    // A low-poly guidance strip gets its raised-dot/line relief entirely from
-    // the detail normal map; it does not add a separate modeled curb.
-    City_Tactile: surfaceMaterial('City_Tactile', tactile.base, tactile.detail, { color: 0xe6bd69, period: 2.2, strength: .52 }),
-    City_Curb: new THREE.MeshStandardMaterial({
-      name: 'City_Curb', map: curb.base, normalMap: curb.detail,
-      normalScale: new THREE.Vector2(.22, .22), color: 0xffffff,
-      roughness: .94, metalness: 0, side: THREE.DoubleSide,
-      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2
-    })
+    City_Sidewalk: pavingMaterial('City_Sidewalk', pavers, .65),
+    // Longitudinal ribs, bevels and stone joints are texture/normal detail;
+    // all three surfaces stay in the same batched road mesh.
+    City_Tactile: pavingMaterial('City_Tactile', tactile, .8),
+    City_Curb: pavingMaterial('City_Curb', curb, .55)
   };
   const counts = Object.fromEntries(Object.keys(replacements).map(name => [name, 0]));
   city.traverse(mesh => {

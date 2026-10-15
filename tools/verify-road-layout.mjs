@@ -19,7 +19,7 @@ import { roundSceneRocks } from '../rounded-rocks.js';
 
 const read=n=>JSON.parse(fs.readFileSync('assets/'+n));
 const {city,road,center}=loadCity(),plan=buildRoundedJunctions(road),query=createRoadQuery(plan);
-const bytes=fs.readFileSync('assets/roads-rounded-v10.bin');
+const bytes=fs.readFileSync('assets/roads-rounded-v11.bin');
 installRoadGeometry(city,decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)));
 installTestTerrain(city);installJunctionFurniture(city,read('junction-furniture-v4.json'));
 createLakeside(city);reduceSceneDensity(city);

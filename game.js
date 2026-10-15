@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20260928';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
@@ -15,6 +16,7 @@ import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
+import { installStreetComponents } from './street-components.js?v=20261015-street-kit';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
@@ -574,8 +576,9 @@ function coinPop(gain) {
      1. 存到 Cache Storage —— 首次下完之后再进游戏是秒开，断网也能玩
      2. 下载失败退避重试 —— 手机弱网下断一次不至于整局白费              */
 const loader = new FBXLoader();
+const gltfLoader = new GLTFLoader();
 
-const CACHE_NAME = 'postman-assets-v6';
+const CACHE_NAME = 'postman-assets-v7';
 const NOCACHE = /(\?|&)nocache/.test(location.search);
 let assetCache;
 
@@ -676,6 +679,13 @@ function loadOne(url, onFrac) {
   return withRetry(url, async () => {
     const buf = await fetchAsset(url, onFrac);
     return loader.parse(buf, url.slice(0, url.lastIndexOf('/') + 1));
+  });
+}
+
+function loadGLB(url, onFrac) {
+  return withRetry(url, async () => {
+    const buf = await fetchAsset(url, onFrac);
+    return gltfLoader.parseAsync(buf, url.slice(0, url.lastIndexOf('/') + 1));
   });
 }
 
@@ -2231,7 +2241,7 @@ async function boot() {
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
   const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas] = await Promise.all([
-    withRetry('./assets/roads-rounded-v10.bin', () => fetchAsset('./assets/roads-rounded-v10.bin')),
+    withRetry('./assets/roads-rounded-v11.bin', () => fetchAsset('./assets/roads-rounded-v11.bin')),
     withRetry('./assets/junction-furniture-v4.json', () => fetchAsset('./assets/junction-furniture-v4.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
@@ -2259,7 +2269,17 @@ async function boot() {
     streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
   if (DEBUG) console.info('Roadside buildings:', buildingStats);
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
-  if (DEBUG) console.info('Street layout release: 20261015-frontage-v2 (roads v10, lamps v4, buildings v2)');
+  if (DEBUG) console.info('Street layout release: 20261015-frontage-v2 (roads v11, lamps v5, buildings v2)');
+
+  setProgress(0.575, '替换路灯与街道组件…');
+  const streetKit = await loadGLB('./assets/street-components-v1.glb');
+  const streetKitStats = installStreetComponents(city, streetKit.scene, {
+    radius: 602 + (604.6 - 602) / 3,
+    scale: 3,
+    toonify,
+    mobile: IS_MOBILE
+  });
+  if (DEBUG) console.info('Street components:', streetKitStats);
 
   const grassLevel = raiseGrassLevel(city);
   if (DEBUG) console.info('Grass level:', grassLevel);
