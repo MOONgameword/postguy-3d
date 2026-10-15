@@ -2241,7 +2241,7 @@ async function boot() {
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
   const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas] = await Promise.all([
-    withRetry('./assets/roads-rounded-v11.bin', () => fetchAsset('./assets/roads-rounded-v11.bin')),
+    withRetry('./assets/roads-rounded-v12.bin', () => fetchAsset('./assets/roads-rounded-v12.bin')),
     withRetry('./assets/junction-furniture-v4.json', () => fetchAsset('./assets/junction-furniture-v4.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
@@ -2269,7 +2269,7 @@ async function boot() {
     streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
   if (DEBUG) console.info('Roadside buildings:', buildingStats);
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
-  if (DEBUG) console.info('Street layout release: 20261015-frontage-v2 (roads v11, lamps v5, buildings v2)');
+  if (DEBUG) console.info('Street layout release: 20261015-frontage-v3 (roads v12, lamps v5, buildings v2)');
 
   setProgress(0.575, '替换路灯与街道组件…');
   const streetKit = await loadGLB('./assets/street-components-v1.glb');

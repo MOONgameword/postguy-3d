@@ -11,6 +11,10 @@ const CURB_TOP = WALK + 0.20;
 // arterial at that width, and make every other corridor a compact two-lane road.
 const MAIN_HALF = 35, SIDE_HALF = 18, SIDEWALK = 15;
 const CURB_GAP = 1.4;
+// A short sloped face softens the sidewalk/curb transition while keeping the
+// walkable deck at WALK.  Keep it small so the tactile strip and furniture
+// placement retain their existing positions.
+const CURB_BEVEL = 0.32;
 const TACTILE_GAP = 3.2, TACTILE_WIDTH = 2.0;
 const TAU = Math.PI * 2;
 const v2 = (x = 0, y = 0) => new THREE.Vector2(x, y);
@@ -200,17 +204,20 @@ export function buildRoundedJunctions(mesh) {
       const strips=Math.ceil(2*sector.b.half/10);
       for(let k=1;k<strips;k++) outline.push(mouth(sector.b,-sector.b.half+2*sector.b.half*k/strips));
       const atOffset = offset => sectorPath(sector, sector.a.half + offset, sector.b.half + offset);
+      const innerCurbTop = atOffset(CURB_GAP - CURB_BEVEL);
+      const innerWalkEdge = atOffset(CURB_GAP);
+      const outerCurbTop = atOffset(SIDEWALK - CURB_GAP + CURB_BEVEL);
+      const outerWalkEdge = atOffset(SIDEWALK - CURB_GAP);
       // The guidance strip is part of the deck, not a second overlapping plane.
       // Shared cross-sections prevent flicker on the curved planet surface.
       for (const [from, to] of [[CURB_GAP, TACTILE_GAP], [TACTILE_GAP + TACTILE_WIDTH, SIDEWALK - CURB_GAP]])
         ribbon(j, atOffset(from), atOffset(to), WALK, WALK, walkIndex, front, from / 6, to / 6);
       ribbon(j, front, front, ROAD, CURB_TOP, curbIndex);
-      ribbon(j, front, curbPath, CURB_TOP, CURB_TOP, curbIndex);
-      ribbon(j, curbPath, curbPath, CURB_TOP, WALK, curbIndex, front);
+      ribbon(j, front, innerCurbTop, CURB_TOP, CURB_TOP, curbIndex);
+      ribbon(j, innerCurbTop, innerWalkEdge, CURB_TOP, WALK, curbIndex, front);
       ribbon(j, back, back, CURB_TOP, 600, curbIndex);
-      const outerLip = atOffset(SIDEWALK - CURB_GAP);
-      ribbon(j, back, outerLip, CURB_TOP, CURB_TOP, curbIndex);
-      ribbon(j, outerLip, outerLip, CURB_TOP, WALK, curbIndex, back);
+      ribbon(j, back, outerCurbTop, CURB_TOP, CURB_TOP, curbIndex);
+      ribbon(j, outerCurbTop, outerWalkEdge, CURB_TOP, WALK, curbIndex, back);
       const tactileA = sectorPath(sector, sector.a.half + TACTILE_GAP, sector.b.half + TACTILE_GAP);
       const tactileB = sectorPath(sector, sector.a.half + TACTILE_GAP + TACTILE_WIDTH, sector.b.half + TACTILE_GAP + TACTILE_WIDTH);
       ribbon(j, tactileA, tactileB, WALK, WALK, tactileIndex, front);
@@ -280,13 +287,17 @@ export function buildRoundedJunctions(mesh) {
           k / count * tactileRepeats, (k + 1) / count * tactileRepeats);
         const u0 = k / count * curbRepeats, u1 = (k + 1) / count * curbRepeats;
         quad(curbIndex, at(a, sign * half, ROAD), at(b, sign * half, ROAD), at(b, sign * half, CURB_TOP), at(a, sign * half, CURB_TOP), u0, u1);
-        quad(curbIndex, at(a, sign * half, CURB_TOP), at(b, sign * half, CURB_TOP), at(b, sign * (half + CURB_GAP), CURB_TOP), at(a, sign * (half + CURB_GAP), CURB_TOP), u0, u1);
-        const roadLip = sign * (half + CURB_GAP);
-        quad(curbIndex, at(a, roadLip, CURB_TOP), at(b, roadLip, CURB_TOP), at(b, roadLip, WALK), at(a, roadLip, WALK), u0, u1);
+        const roadCurbTop = sign * (half + CURB_GAP - CURB_BEVEL);
+        const roadWalkEdge = sign * (half + CURB_GAP);
+        quad(curbIndex, at(a, sign * half, CURB_TOP), at(b, sign * half, CURB_TOP), at(b, roadCurbTop, CURB_TOP), at(a, roadCurbTop, CURB_TOP), u0, u1);
+        // Small bevel from the raised curb cap down to the sidewalk deck.
+        quad(curbIndex, at(a, roadCurbTop, CURB_TOP), at(b, roadCurbTop, CURB_TOP), at(b, roadWalkEdge, WALK), at(a, roadWalkEdge, WALK), u0, u1);
         quad(curbIndex, at(a, sign * outer, CURB_TOP), at(b, sign * outer, CURB_TOP), at(b, sign * outer, 600), at(a, sign * outer, 600), u0, u1);
         const innerEdge = sign * (outer - CURB_GAP);
-        quad(curbIndex, at(a, sign * outer, CURB_TOP), at(b, sign * outer, CURB_TOP), at(b, innerEdge, CURB_TOP), at(a, innerEdge, CURB_TOP), u0, u1);
-        quad(curbIndex, at(a, innerEdge, CURB_TOP), at(b, innerEdge, CURB_TOP), at(b, innerEdge, WALK), at(a, innerEdge, WALK), u0, u1);
+        const outerCurbEdge = sign * (outer - CURB_GAP + CURB_BEVEL);
+        quad(curbIndex, at(a, sign * outer, CURB_TOP), at(b, sign * outer, CURB_TOP), at(b, outerCurbEdge, CURB_TOP), at(a, outerCurbEdge, CURB_TOP), u0, u1);
+        // Matching bevel on the grass side of the sidewalk.
+        quad(curbIndex, at(a, outerCurbEdge, CURB_TOP), at(b, outerCurbEdge, CURB_TOP), at(b, innerEdge, WALK), at(a, innerEdge, WALK), u0, u1);
       }
     }
     corridors.push({ j, other, arm, reverse, start, end, side, crossings, at });

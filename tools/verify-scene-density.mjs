@@ -9,7 +9,7 @@ import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } fro
 import { createCollisionWorld } from '../collision-world.js';
 
 const { city, road } = loadCity();
-const roadBytes = fs.readFileSync('assets/roads-rounded-v11.bin');
+const roadBytes = fs.readFileSync('assets/roads-rounded-v12.bin');
 installRoadGeometry(city, decodeRoadGeometry(roadBytes.buffer.slice(roadBytes.byteOffset, roadBytes.byteOffset + roadBytes.byteLength)));
 installJunctionFurniture(city, JSON.parse(fs.readFileSync('assets/junction-furniture-v4.json')));
 installTestTerrain(city);
