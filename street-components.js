@@ -34,12 +34,41 @@ function sidewalkFrame(lamp, radius) {
 }
 
 function orient(root, frame, offset = 0, scale = 1, faceRoad = false) {
-  const x = (faceRoad ? frame.roadward : frame.tangent).clone();
   const y = frame.up.clone();
-  const z = new THREE.Vector3().crossVectors(x, y).normalize();
+  let x, z;
+  if (faceRoad === 'front') {
+    // Signal housings have their visible lens on source +Z. Rotate that face
+    // toward the carriageway while keeping their pole vertical.
+    z = frame.roadward.clone();
+    x = new THREE.Vector3().crossVectors(y, z).normalize();
+  } else {
+    x = (faceRoad ? frame.roadward : frame.tangent).clone();
+    z = new THREE.Vector3().crossVectors(x, y).normalize();
+  }
   root.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
   root.position.copy(frame.base).addScaledVector(frame.tangent, offset);
   root.scale.setScalar(scale);
+}
+
+function lightSignal(root, id) {
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      if (!m || !m.emissive) continue;
+      const name = m.name || '';
+      let color = null;
+      if (id === '03' && /红灯/.test(name)) color = 0xff3045;
+      if (id === '02' && /红灯/.test(name)) color = 0xff3045;
+      if (id === '02' && /黄/.test(name)) color = 0xffc51b;
+      if (id === '02' && /青灯/.test(name)) color = 0x20e6c4;
+      if (!color) continue;
+      m.emissive.setHex(color);
+      m.emissiveIntensity = id === '03' ? 1.35 : 1.1;
+      m.toneMapped = false;
+      m.needsUpdate = true;
+    }
+  });
 }
 
 function makeTemplates(source) {
@@ -112,6 +141,7 @@ export function installStreetComponents(city, source, {
     item.userData.streetComponent = true;
     root.add(item);
     toonify?.(item, { palette: false, castShadow: !mobile });
+    if (id === '02' || id === '03') lightSignal(item, id);
     addOutline?.(item, outline);
     placed.push(item);
   };
@@ -129,13 +159,19 @@ export function installStreetComponents(city, source, {
     const up = new THREE.Vector3().fromArray(placement.position).normalize();
     const roadward = new THREE.Vector3().fromArray(placement.roadward)
       .addScaledVector(up, -new THREE.Vector3().fromArray(placement.roadward).dot(up)).normalize();
-    add('03', { up, tangent: roadward, roadward, base: up.clone().multiplyScalar(radius) }, 0, 1, true);
+    const tangent = new THREE.Vector3().fromArray(placement.tangent || placement.roadward)
+      .addScaledVector(up, -new THREE.Vector3().fromArray(placement.tangent || placement.roadward).dot(up)).normalize();
+    const frame = { up, tangent, roadward, base: up.clone().multiplyScalar(radius) };
+    add('03', frame, 0, 1, 'front');
+    // The horizontal traffic signal sits a short distance along the frontage
+    // so it reads as a separate pole at the same crosswalk edge.
+    add('02', frame, 2.5, 1, 'front');
   }
 
   // Small deterministic counts keep the authored street kit visible without
   // recreating the old dense sidewalk clutter. Wider barriers/planters get a
   // tangent offset so their footprint stays inside the paving band.
-  const counts = { '01': 4, '02': 4, '05': 4, '06': 4, '07': 4,
+  const counts = { '01': 4, '05': 4, '06': 4, '07': 4,
     '08': 4, '09': 8, '10': 4, '11': 4, '12': 4, '13': 8, '14': 10 };
   let seed = 7;
   for (const id of Object.keys(counts)) {

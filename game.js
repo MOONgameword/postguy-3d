@@ -16,7 +16,7 @@ import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
-import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v2';
+import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
@@ -2270,7 +2270,7 @@ async function boot() {
     streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
   if (DEBUG) console.info('Roadside buildings:', buildingStats);
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
-  if (DEBUG) console.info('Street layout release: 20261015-frontage-v3 (roads v12, lamps v5, buildings v2)');
+  if (DEBUG) console.info('Street layout release: 20261015-frontage-v4 (roads v12, lamps v6, signals v2, buildings v2)');
 
   setProgress(0.575, '替换路灯与街道组件…');
   const streetKit = await loadGLB('./assets/street-components-v1.glb');
