@@ -37,7 +37,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
         float rollingColor = .5 + .13 * sin(dot(surfacePosition, vec3(.019,.027,.013)))
           + .13 * sin(dot(surfacePosition, vec3(-.037,.011,.023)));
         float grassTone = clamp(.30 + grassLight * 1.35 + rollingColor * .22, 0., 1.);
-        vec3 meadowColor = mix(vec3(.09,.20,.040), vec3(.34,.52,.105), grassTone);
+        vec3 meadowColor = mix(vec3(.06,.22,.025), vec3(.24,.56,.07), grassTone);
         float slope = dot(normalize(surfaceWorldNormal), surfaceUp);
         float meadowCover = smoothstep(.50, .84, slope);
         vec3 limestone = mix(vec3(.28,.34,.32), vec3(.48,.54,.49), grassTone);
@@ -107,7 +107,7 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
   const replacements = {
     City_Grass: surfaceMaterial('City_Grass', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Meadow: surfaceMaterial('City_Meadow', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
-    City_Road: surfaceMaterial('City_Road', asphalt.base, asphalt.detail, { color: 0xc2c4be, period: 12, strength: .16 }),
+    City_Road: surfaceMaterial('City_Road', asphalt.base, asphalt.detail, { color: 0x8a8e98, period: 12, strength: .16 }),
     City_Sidewalk: pavingMaterial('City_Sidewalk', pavers, .65),
     // Longitudinal ribs, bevels and stone joints are texture/normal detail;
     // all three surfaces stay in the same batched road mesh.

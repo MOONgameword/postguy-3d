@@ -3,7 +3,7 @@ import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20260928';
+import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261020-bluesky';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-frontage';
@@ -11,7 +11,7 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261015-sidewalk-reference';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261020-anime';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
@@ -91,10 +91,10 @@ renderer.shadowMap.enabled = !/(\?|&)noshadow/.test(location.search);
 renderer.shadowMap.type = IS_MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xd9d5bf, CFG.fog[0], CFG.fog[1]);
+scene.fog = new THREE.Fog(0xbcdcf2, CFG.fog[0], CFG.fog[1]);
 
 const camera = new THREE.PerspectiveCamera(48, 1, 0.15 * S, 5200);
 camera.position.set(0, 6, -10);
@@ -123,7 +123,7 @@ const cloudTex = cloudTexture();
 /* 云的位置每帧在玩家脚下的切平面里重算，这里只存「东/北向偏移 + 高度」 */
 const clouds = [];
 for (let i = 0; i < (IS_MOBILE ? 4 : 7); i++) {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, color: 0xe7dfcd, transparent: true, opacity: 0.16, fog: false, depthWrite: false }));
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, color: 0xffffff, transparent: true, opacity: 0.4, fog: false, depthWrite: false }));
   const s = (70 + Math.random() * 90) * S;
   sp.scale.set(s, s * 0.46, 1);
   scene.add(sp);
@@ -134,8 +134,8 @@ for (let i = 0; i < (IS_MOBILE ? 4 : 7); i++) {
   });
 }
 
-const hemisphere = new THREE.HemisphereLight(0xb9c9c5, 0x969b7d, 1.35);
-const ambient = new THREE.AmbientLight(0xe4dfcc, 0.55);
+const hemisphere = new THREE.HemisphereLight(0xa8ccf2, 0x7f9a5e, 1.05);
+const ambient = new THREE.AmbientLight(0xcfe0f7, 0.38);
 scene.add(hemisphere, ambient);
 const sun = new THREE.DirectionalLight(0xfff8e6, 1.3);
 sun.position.set(46 * S, 86 * S, 38 * S);
@@ -157,8 +157,8 @@ document.documentElement.dataset.light = 'day';
 let lakeside = null;
 let introPreview = !DEBUG && !/(?:\?|&)(?:selftest|cartest|footest)(?:&|$)/.test(location.search);
 
-/* Matte postcard palette; preserve the source model's faceted normals. */
-const WASH = { sat: 0.78, contrast: 0.94, coolShadow: 0.04 };
+/* Bright anime-style palette: clean saturated colours, fresh greens, crisp contrast. */
+const WASH = { sat: 1.18, contrast: 1.06, coolShadow: 0.05 };
 function pastel(m) {
   const f = v => v.toFixed(4);
   m.onBeforeCompile = shader => {
@@ -167,15 +167,15 @@ function pastel(m) {
       `#include <map_fragment>
        float green = smoothstep(0.015, 0.12, diffuseColor.g - max(diffuseColor.r, diffuseColor.b));
        float vegetationLight = dot(diffuseColor.rgb, vec3(0.2126,0.7152,0.0722));
-       vec3 sage = vec3(0.24, 0.32, 0.15) * (0.55 + vegetationLight * 1.6);
-       diffuseColor.rgb = mix(diffuseColor.rgb, sage, green * 0.74);
+       vec3 leaf = vec3(0.16, 0.42, 0.07) * (0.6 + vegetationLight * 1.5);
+       diffuseColor.rgb = mix(diffuseColor.rgb, leaf, green * 0.35);
        float wg = dot(diffuseColor.rgb, vec3(0.299,0.587,0.114));
        diffuseColor.rgb = mix(vec3(wg), diffuseColor.rgb, ${f(WASH.sat)});
        diffuseColor.rgb = (diffuseColor.rgb - 0.5) * ${f(WASH.contrast)} + 0.5;
        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.86,0.94,1.12), ${f(WASH.coolShadow)} * (1.0 - wg));
        diffuseColor.rgb = clamp(diffuseColor.rgb, 0.0, 1.0);`);
   };
-  m.customProgramCacheKey = () => 'postcard-matte-v1';
+  m.customProgramCacheKey = () => 'anime-vivid-v1';
   return m;
 }
 
@@ -187,9 +187,9 @@ function pastel(m) {
    赛璐璐再往上加对比（暗部乘 0.7、(c-0.5)*1.06+0.5），整条马路就压成一片死黑，
    紧贴着饱和的绿草，看着像地上破了个洞。这里把这几个过暗的地表色抬到正常灰度。 */
 const CITY_TINT = {
-  City_Road: 0x85877b, City_RoadLine: 0xe9dec0, City_Sidewalk: 0xb9b39a,
-  City_Curb: 0xd4cbb1, City_Grass: 0x8d9a66, City_Meadow: 0xa2ab78,
-  City_Rock: 0xa6a392,
+  City_Road: 0x5c5f66, City_RoadLine: 0xf4f0e4, City_Sidewalk: 0xc6c8ca,
+  City_Curb: 0xdedcd6, City_Grass: 0x6fa84a, City_Meadow: 0x88b85a,
+  City_Rock: 0xaaa9a2,
 };
 
 const toonCache = new Map();
