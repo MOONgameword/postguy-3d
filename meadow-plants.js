@@ -64,16 +64,17 @@ export function createGrassCards(texture = null, turf = null) {
       float grain=texture2D(turfNap,sp.yz).r*w.x+texture2D(turfNap,sp.xz).r*w.y+texture2D(turfNap,sp.xy).r*w.z;
       vec3 turf=turfColor(tone);
       vec3 groundColor=turf*turfGrainFactor(grain);
-      // Roots are exactly the turf below them; the blade only brightens a little
-      // toward the tip (same hue, slight sunlit warmth), and the first third of
-      // the blade stays at ground colour so the base melts into the lawn.
-      vec3 tipColor=turf*mix(turfGrainFactor(grain),1.,.6)*vec3(1.16,1.14,1.0);
-      float bladeGradient=smoothstep(.3,1.,grassHeight);
-      diffuseColor.rgb*=mix(groundColor,tipColor,bladeGradient*bladeGradient);
+      // Follows the stylized trees' bottom-to-top foliage ramp: roots are exactly
+      // the turf below, then one continuous smooth rise to a tip only a little
+      // lighter and warmer than the brightest turf (blue kept low so it stays a
+      // clean green under the blue sky fill). No plateaus, no pale yellow cap.
+      vec3 bladeTip=vec3(.30,.60,.06)*mix(.82,1.04,tone);
+      float rise=smoothstep(.08,1.,grassHeight);
+      diffuseColor.rgb*=mix(groundColor,bladeTip,rise*(2.-rise)*.92);
       diffuseColor.a*=smoothstep(0.,.12,grassHeight);
     `);
   };
-  material.customProgramCacheKey=()=> `grass-ground-blend-v7-${!!turf}`;
+  material.customProgramCacheKey=()=> `grass-ground-blend-v9-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 

@@ -14,7 +14,7 @@ import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261020-turf';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261020-ring';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261020-blade-tree';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
@@ -2008,13 +2008,13 @@ function updateCamera(dt) {
     camera.lookAt(PLANET.C);
     return;
   }
-  const base = state.onBike ? 9.0 * S + Math.abs(state.speed) * 0.11 : 7.2 * S + foot.speed * 0.2;
+  const base = state.onBike ? 8.0 * S + Math.abs(state.speed) * 0.11 : 7.2 * S + foot.speed * 0.2;
   const back = cameraDistance(base);
-  // Lower the bike camera slightly and aim a little behind the rider so the
-  // character sits nearer the middle of the mobile frame.
-  const high = (state.onBike ? 3.7 : 3.0) * S;
-  camGoal.copy(p).addScaledVector(_cDir, -back).addScaledVector(_cUp, high + back * 0.22);
-  lookGoal.copy(p).addScaledVector(_cDir, (state.onBike ? -0.8 : 4.2) * S).addScaledVector(_cUp, 1.1 * S);
+  // Bike camera sits a little closer and lower, aimed slightly higher, so the
+  // view is flatter (~23° down instead of ~29°) and more of the street frontage shows.
+  const high = (state.onBike ? 3.1 : 3.0) * S;
+  camGoal.copy(p).addScaledVector(_cDir, -back).addScaledVector(_cUp, high + back * (state.onBike ? 0.18 : 0.22));
+  lookGoal.copy(p).addScaledVector(_cDir, (state.onBike ? -0.8 : 4.2) * S).addScaledVector(_cUp, (state.onBike ? 1.5 : 1.1) * S);
   camera.position.lerp(camGoal, Math.min(1, dt * (state.onBike ? 6 : 7)));
   camera.lookAt(lookGoal);
 }
