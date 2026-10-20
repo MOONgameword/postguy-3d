@@ -1,5 +1,12 @@
 import * as THREE from 'three';
 
+// One turf palette for the ground and the grass blades standing on it, so blade
+// roots are exactly the colour of the soil-level turf they grow out of.
+export const TURF_GLSL = `
+vec3 turfColor( float tone ) { return mix( vec3( .06, .22, .025 ), vec3( .24, .56, .07 ), tone ); }
+float turfGrainFactor( float grain ) { return .48 + 1.05 * grain; }
+`;
+
 // Terrain and asphalt have no directional pattern, so world-space triplanar
 // mapping keeps them continuous around the planet. Paving uses road-following UVs.
 function surfaceMaterial(name, base, detail, { color, period, strength, grass = false, nap = null }) {
@@ -23,7 +30,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
         uniform sampler2D surfaceDetail;
         uniform float surfaceScale;
         uniform float surfaceStrength;
-        ${grass ? 'uniform sampler2D surfaceNap;' : ''}
+        ${grass ? 'uniform sampler2D surfaceNap;' + TURF_GLSL : ''}
       `)
       .replace('#include <map_fragment>', `#include <map_fragment>
         vec3 surfaceUp = normalize(surfacePosition);
@@ -37,7 +44,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
         float rollingColor = .5 + .13 * sin(dot(surfacePosition, vec3(.019,.027,.013)))
           + .13 * sin(dot(surfacePosition, vec3(-.037,.011,.023)));
         float grassTone = clamp(.30 + grassLight * 1.35 + rollingColor * .22, 0., 1.);
-        vec3 meadowColor = mix(vec3(.06,.22,.025), vec3(.24,.56,.07), grassTone);
+        vec3 meadowColor = turfColor(grassTone);
         float slope = dot(normalize(surfaceWorldNormal), surfaceUp);
         float meadowCover = smoothstep(.50, .84, slope);
         vec3 limestone = mix(vec3(.28,.34,.32), vec3(.48,.54,.49), grassTone);
@@ -50,7 +57,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
         ${grass ? `float turfGrain = texture2D(surfaceNap, sp.yz).r * surfaceWeight.x
           + texture2D(surfaceNap, sp.xz).r * surfaceWeight.y
           + texture2D(surfaceNap, sp.xy).r * surfaceWeight.z;
-        diffuseColor.rgb *= mix(1.0, .48 + 1.05 * turfGrain, meadowCover);
+        diffuseColor.rgb *= mix(1.0, turfGrainFactor(turfGrain), meadowCover);
         ` : ''}
       `)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
@@ -72,7 +79,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
       outgoingLight += vec3(.035,.055,.009) * nap * meadowCover;
       #include <opaque_fragment>`);
   };
-  material.customProgramCacheKey = () => `planet-surface-v4-${grass ? 'grass' : 'stone'}`;
+  material.customProgramCacheKey = () => `planet-surface-v5-${grass ? 'grass' : 'stone'}`;
   return material;
 }
 

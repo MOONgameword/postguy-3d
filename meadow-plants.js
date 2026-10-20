@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { lakeMetric } from './lakeside.js?v=20260930-22';
+import { TURF_GLSL } from './surface-materials.js?v=20261020-turf';
 
 export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
 
@@ -50,9 +51,9 @@ export function createGrassCards(texture = null, turf = null) {
       grassGroundPosition=(modelMatrix*groundVertex).xyz;
       grassHeight=position.y/1.2705;
     `);
-    shader.fragmentShader='varying vec3 grassGroundPosition; varying float grassHeight; uniform sampler2D turfBase; uniform sampler2D turfNap;\n'+shader.fragmentShader;
+    shader.fragmentShader='varying vec3 grassGroundPosition; varying float grassHeight; uniform sampler2D turfBase; uniform sampler2D turfNap;\n'+TURF_GLSL+shader.fragmentShader;
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-      // Same world mapping, linear palette and grain as City_Grass.
+      // Same world mapping, palette and grain as City_Grass, sampled at the root.
       vec3 gp=grassGroundPosition;
       vec3 w=pow(abs(normalize(gp)),vec3(4.)); w/=dot(w,vec3(1.));
       vec3 sp=gp/14.;
@@ -61,16 +62,18 @@ export function createGrassCards(texture = null, turf = null) {
       float rolling=.5+.13*sin(dot(gp,vec3(.019,.027,.013)))+.13*sin(dot(gp,vec3(-.037,.011,.023)));
       float tone=clamp(.30+lum*1.35+rolling*.22,0.,1.);
       float grain=texture2D(turfNap,sp.yz).r*w.x+texture2D(turfNap,sp.xz).r*w.y+texture2D(turfNap,sp.xy).r*w.z;
-      vec3 groundColor=mix(vec3(.09,.20,.040),vec3(.34,.52,.105),tone)*(.48+1.05*grain);
-      // Roots use the same sampled turf tone; the upper blades rise into the
-      // warm yellow-green shown in the reference instead of staying flat green.
-      float bladeGradient=smoothstep(.04,.92,grassHeight);
-      vec3 tipColor=mix(vec3(.25,.39,.055),vec3(.48,.61,.13),tone);
-      diffuseColor.rgb*=mix(groundColor,tipColor,bladeGradient);
+      vec3 turf=turfColor(tone);
+      vec3 groundColor=turf*turfGrainFactor(grain);
+      // Roots are exactly the turf below them; the blade only brightens a little
+      // toward the tip (same hue, slight sunlit warmth), and the first third of
+      // the blade stays at ground colour so the base melts into the lawn.
+      vec3 tipColor=turf*mix(turfGrainFactor(grain),1.,.6)*vec3(1.16,1.14,1.0);
+      float bladeGradient=smoothstep(.3,1.,grassHeight);
+      diffuseColor.rgb*=mix(groundColor,tipColor,bladeGradient*bladeGradient);
       diffuseColor.a*=smoothstep(0.,.12,grassHeight);
     `);
   };
-  material.customProgramCacheKey=()=> `grass-ground-blend-v6-${!!turf}`;
+  material.customProgramCacheKey=()=> `grass-ground-blend-v7-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
@@ -136,14 +139,16 @@ function stemGeometry() {
 }
 
 export function createMeadowPlants(scene, field, { mobile = false, model = createGrassCards() } = {}) {
-  // The visible planet is smaller than this radius; the larger budget keeps
-  // grass ready while the camera travels and avoids pop-in at the horizon.
-  const range = mobile ? 7920 : 10800;
-  const nearRange = mobile ? 240 : 330;
-  // Three crossed cards nearby, two in the distant ring; keep existing budgets.
-  const capacity = model ? (mobile ? 1620 : 3780) : (mobile ? 28000 : 64000);
-  const farCapacity = model ? (mobile ? 4000 : 10000) : 0;
+  // Two concentric rings around the focus, both cut by each root's true distance,
+  // so the loaded patch is a circle rather than the outline of the 48-unit
+  // storage cells. Dense three-card tufts fill nearRange, then thin out smoothly
+  // into sparse two-card tufts that fade to nothing at `range`.
+  const nearRange = mobile ? 74 : 90;
+  const range = nearRange * 2;
   const densityKeep = model ? .6 : 1;
+  const farRatio = .22 / densityKeep;
+  const capacity = model ? (mobile ? 6800 : 16000) : (mobile ? 28000 : 64000);
+  const farCapacity = model ? (mobile ? 4000 : 10000) : 0;
   const uniforms = { meadowTime: { value: 0 }, meadowFocus: { value: new T.Vector3() }, meadowRange: { value: range } };
   function material(flower = false, base = null) {
     const mat = base || (flower ? new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide })
@@ -189,50 +194,83 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
     const [x,y,z] = cellKey.split(',').map(Number);
     return { data, center: new T.Vector3((x + .5) * CELL, (y + .5) * CELL, (z + .5) * CELL) };
   });
-  const cellDistance = new Float32Array(cellRecords.length);
   const q = new T.Quaternion(), yaw = new T.Quaternion(), axis = new T.Vector3(0, 1, 0), matrix = new T.Matrix4();
   const colors = ['#f3ce55', '#ead9b3'].map(c => new T.Color(c));
+  // Candidate pool: which cell array + offset each kept root came from. Keys pack
+  // distance and pool index so an overflowing ring can be trimmed to its nearest
+  // roots with one native numeric sort, keeping the edge circular.
+  const poolSize = (capacity + farCapacity) * 3;
+  const poolData = new Array(poolSize), poolOffset = new Int32Array(poolSize);
+  const nearKeys = new Float64Array(poolSize), farKeys = new Float64Array(poolSize);
+  const INDEX_BITS = 2 ** 22;
+  const cellReach = range + CELL * .87;
+
+  // Density relative to the stored roots: full inside 75% of nearRange, easing
+  // down to farRatio at nearRange, then linearly to zero at range.
+  function keepAt(d) {
+    if (d <= nearRange) return 1 + (farRatio - 1) * smooth(nearRange * .75, nearRange, d);
+    return farRatio * (1 - smooth(nearRange, range, d));
+  }
+
+  function place(mesh, index, data, offset) {
+    p.fromArray(data, offset);
+    const seed = data[offset + 3];
+    up.copy(p).normalize(); q.setFromUnitVectors(axis, up).multiply(yaw.setFromAxisAngle(axis, seed * Math.PI * 2));
+    const size = .68 + seed * .55;
+    // Sink roots slightly so no sliver appears between blades and sloping land.
+    matrix.compose(p.addScaledVector(up, -.08), q, scale.set(size, size, size));
+    mesh.setMatrixAt(index, matrix);
+    return seed;
+  }
 
   function update(time, focus) {
     uniforms.meadowTime.value = time; uniforms.meadowFocus.value.copy(focus);
     if (last.distanceToSquared(focus) < 36) return;
-    last.copy(focus); let gi = 0, fgi = 0, fi = 0;
-    // Visit occupied bins only, rather than millions of empty cube cells.
-    const cells=[];
-    for(let ci=0; ci<cellRecords.length; ci++) {
-      const record=cellRecords[ci];
-      const distance=cellDistance[ci]=record.center.distanceToSquared(focus);
-      if(distance <= (range + CELL) * (range + CELL)) cells.push({data:record.data,distance,ci});
-    }
-    // Sorting occupied cells is cheaper than walking the old cubic grid and
-    // lets the nearest cells fill first without string parsing per update.
-    cells.sort((a, b) => a.distance - b.distance);
-    const farQuota=Math.max(1,Math.floor(farCapacity/Math.max(1,cells.length)));
-    roots: for (const { data } of cells) for (let i = 0; i < data.length; i += 5) {
-      p.fromArray(data, i); const distanceSq = p.distanceToSquared(focus); if (distanceSq > range * range) continue;
-      const seed = data[i + 3], flower = data[i + 4] > 0;
-      if (seed > densityKeep || (mobile && seed < .22)) continue;
-      if(gi>=capacity && (!farGrass || fgi>=farCapacity)) break roots;
-      if(distanceSq<=nearRange*nearRange ? gi>=capacity : !farGrass || fgi>=farCapacity) continue;
-      // Evenly distribute far cards across bins; never exhaust the pool in
-      // the first few cells and leave the expanded distance empty.
-      if(distanceSq>nearRange*nearRange && Math.floor(i/5)%Math.max(1,Math.ceil(data.length/5/Math.max(1,farQuota)))!==0) continue;
-      up.copy(p).normalize(); q.setFromUnitVectors(axis, up).multiply(yaw.setFromAxisAngle(axis, seed * Math.PI * 2));
-      const size = .68 + seed * .55;
-      // Sink roots slightly so no sliver appears between blades and sloping land.
-      matrix.compose(p.addScaledVector(up, -.08), q, scale.set(size, size, size));
-      if (distanceSq <= nearRange * nearRange) {
-        if (gi >= capacity) continue;
-        grass.setMatrixAt(gi++, matrix);
-      } else if (farGrass) {
-        if (fgi >= farCapacity) continue;
-        farGrass.setMatrixAt(fgi++, matrix);
-      } else continue;
-      if (flower && fi < stems.instanceMatrix.count) {
-        stems.setMatrixAt(fi, matrix); blooms.setMatrixAt(fi, matrix);
-        blooms.setColorAt(fi, colors[Math.min(colors.length - 1, Math.floor(seed * colors.length))]); fi++;
+    last.copy(focus);
+    let pool = 0, nn = 0, fn = 0;
+    const rangeSq = range * range, reachSq = cellReach * cellReach;
+    gather: for (let ci = 0; ci < cellRecords.length; ci++) {
+      const record = cellRecords[ci];
+      if (record.center.distanceToSquared(focus) > reachSq) continue;
+      const data = record.data;
+      for (let i = 0; i < data.length; i += 5) {
+        p.fromArray(data, i);
+        const distanceSq = p.distanceToSquared(focus);
+        if (distanceSq > rangeSq) continue;
+        const seed = data[i + 3];
+        if (seed > densityKeep || (mobile && seed < .22)) continue;
+        const d = Math.sqrt(distanceSq);
+        const near = d <= nearRange;
+        if (!near && !farGrass) continue;
+        // Second, independent hash of the seed drives the distance thinning.
+        const thin = (seed * 7919.37 + .13) % 1;
+        if (thin >= keepAt(d)) continue;
+        if (pool >= poolSize) break gather;
+        poolData[pool] = data; poolOffset[pool] = i;
+        const key = Math.floor(d * 64) * INDEX_BITS + pool;
+        if (near) nearKeys[nn++] = key; else farKeys[fn++] = key;
+        pool++;
       }
     }
+    let gi = 0, fgi = 0, fi = 0;
+    const emit = (keys, count, limit, mesh) => {
+      const list = keys.subarray(0, count);
+      if (count > limit) list.sort();
+      const n = Math.min(count, limit);
+      for (let k = 0; k < n; k++) {
+        const index = list[k] % INDEX_BITS;
+        const data = poolData[index], offset = poolOffset[index];
+        const seed = place(mesh, k, data, offset);
+        if (data[offset + 4] > 0 && fi < stems.instanceMatrix.count) {
+          stems.setMatrixAt(fi, matrix); blooms.setMatrixAt(fi, matrix);
+          blooms.setColorAt(fi, colors[Math.min(colors.length - 1, Math.floor(seed * colors.length))]); fi++;
+        }
+      }
+      return n;
+    };
+    gi = emit(nearKeys, nn, capacity, grass);
+    if (farGrass) fgi = emit(farKeys, fn, farCapacity, farGrass);
+    poolData.fill(undefined, 0, pool);
     grass.count = gi; if (farGrass) farGrass.count = fgi; stems.count = blooms.count = fi;
     for (const mesh of [grass, farGrass, stems, blooms]) if (mesh) mesh.instanceMatrix.needsUpdate = true;
     if (grass.instanceColor) grass.instanceColor.needsUpdate = true;

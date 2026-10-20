@@ -3,7 +3,8 @@ import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261020-bluesky';
+import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261020-npr-sky';
+import { installNprShading } from './npr-shading.js?v=20261020-03';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-frontage';
@@ -11,9 +12,9 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20260930-22';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261020-anime';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261020-turf';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261008-08';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261020-ring';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { roundSceneRocks } from './rounded-rocks.js?v=20260929-19';
 import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
@@ -84,6 +85,7 @@ const state = {
 };
 
 /* ---------- renderer / scene ---------- */
+if (!/(?:\?|&)nonpr(?:&|$)/.test(location.search)) installNprShading();
 const canvas = $('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_MOBILE, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, CFG.maxDpr));
@@ -99,40 +101,6 @@ scene.fog = new THREE.Fog(0xbcdcf2, CFG.fog[0], CFG.fog[1]);
 const camera = new THREE.PerspectiveCamera(48, 1, 0.15 * S, 5200);
 camera.position.set(0, 6, -10);
 
-function cloudTexture() {
-  const cv = document.createElement('canvas');
-  cv.width = 256; cv.height = 128;
-  const g = cv.getContext('2d');
-  const puff = (x, y, r, warm) => {
-    const rg = g.createRadialGradient(x, y, r * 0.15, x, y, r);
-    rg.addColorStop(0, 'rgba(255,255,255,1)');
-    rg.addColorStop(0.80, warm ? 'rgba(233,243,252,1)' : 'rgba(255,255,255,1)');
-    rg.addColorStop(0.92, warm ? 'rgba(226,238,250,.92)' : 'rgba(255,255,255,.95)');
-    rg.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = rg;
-    g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-  };
-  [[74, 74, 40], [118, 56, 50], [172, 76, 38], [102, 88, 34], [146, 90, 32], [200, 92, 26]]
-    .forEach(([x, y, r]) => puff(x, y, r, false));
-  [[96, 102, 30], [150, 105, 26]].forEach(([x, y, r]) => puff(x, y, r, true));
-  const t = new THREE.CanvasTexture(cv);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-const cloudTex = cloudTexture();
-/* 云的位置每帧在玩家脚下的切平面里重算，这里只存「东/北向偏移 + 高度」 */
-const clouds = [];
-for (let i = 0; i < (IS_MOBILE ? 4 : 7); i++) {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, color: 0xffffff, transparent: true, opacity: 0.4, fog: false, depthWrite: false }));
-  const s = (70 + Math.random() * 90) * S;
-  sp.scale.set(s, s * 0.46, 1);
-  scene.add(sp);
-  clouds.push({
-    sp,
-    u: rand(-300, 300), v: rand(-260, 260), h: (48 + Math.random() * 80) * S,
-    spd: (1.1 + Math.random() * 1.5) * S
-  });
-}
 
 const hemisphere = new THREE.HemisphereLight(0xa8ccf2, 0x7f9a5e, 1.05);
 const ambient = new THREE.AmbientLight(0xcfe0f7, 0.38);
@@ -2138,15 +2106,7 @@ function loop() {
     meadowPlants.setVisible(!scenicView);
     if (!scenicView) meadowPlants.update(time, fp);
   }
-  for (const c of clouds) {
-    c.u += c.spd * dt;
-    if (c.u > 300) c.u -= 600;
-    /* 加上球面下沉量，云才不会在远处扎进地里 */
-    const sag = (c.u * c.u + c.v * c.v) / (2 * PLANET.R);
-    c.sp.position.copy(fp)
-      .addScaledVector(_lpE, c.u).addScaledVector(_lpN, c.v)
-      .addScaledVector(_lpU, c.h + sag);
-  }
+
 
   $('spd').textContent = Math.round(Math.abs(focusSpeed()) * 3.6 / S);
   if (DEBUG) {
