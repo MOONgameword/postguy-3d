@@ -7,7 +7,14 @@ import * as THREE from 'three';
 // elevation matches the painted sun's height (≈23°).
 const SKY_URL = './assets/sky-bright-day.jpg?v=20261020';
 const SKY_SUN_U = 325 / 1600;
-const SKY_SUN_ELEVATION = 0.92 * Math.tan((0.5 - 297 / 800) * Math.PI);
+const SKY_SUN_ANGLE = (0.5 - 297 / 800) * Math.PI;
+const SKY_SUN_ELEVATION = 0.92 * Math.tan(SKY_SUN_ANGLE);
+// On the small planet the ground horizon sits ~12° below the local horizontal,
+// so the panorama's own horizon (a white cloud sea) showed as a pale band above
+// the hills. The image is pulled down by SKY_DROP: its horizon is placed at
+// -SKY_DROP, the band between there and the painted sun is stretched to fit,
+// and everything from the sun up (and the light direction) stays where it was.
+const SKY_DROP = THREE.MathUtils.degToRad(10);
 
 export const PALETTES = {
   day: {
@@ -30,6 +37,8 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
   const uniforms = {
     panorama: { value: panorama },
     sunU: { value: SKY_SUN_U },
+    sunAngle: { value: SKY_SUN_ANGLE },
+    drop: { value: SKY_DROP },
     fogColor: { value: new THREE.Color() },
     up: { value: new THREE.Vector3(0, 1, 0) },
     east: { value: new THREE.Vector3(1, 0, 0) }, north: { value: new THREE.Vector3(0, 0, 1) },
@@ -44,7 +53,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
       }`,
     fragmentShader: `
       uniform sampler2D panorama;
-      uniform float sunU;
+      uniform float sunU, sunAngle, drop;
       uniform vec3 fogColor, up, east, north, sunDir;
       varying vec3 vDirection;
       const float INV_TAU = 0.15915494;
@@ -52,12 +61,16 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
       void main() {
         vec3 d = normalize(vDirection);
         float h = clamp(dot(d, up), -1.0, 1.0);
+        float a = asin(h);
+        float image = a >= sunAngle ? a
+          : a >= -drop ? (a + drop) / (sunAngle + drop) * sunAngle
+          : (a + drop) / (0.5 * SKY_PI - drop) * 0.5 * SKY_PI;
         float azimuth = atan(dot(d, east), dot(d, north));
         float sunAzimuth = atan(dot(sunDir, east), dot(sunDir, north));
-        vec2 uv = vec2(fract((azimuth - sunAzimuth) * INV_TAU + sunU), 0.5 + asin(h) / SKY_PI);
+        vec2 uv = vec2(fract((azimuth - sunAzimuth) * INV_TAU + sunU), 0.5 + image / SKY_PI);
         vec3 col = texture2D(panorama, uv).rgb;
-        // Blend the painted horizon into the scene fog so distant streets dissolve into the sky.
-        col = mix(col, fogColor, (1.0 - smoothstep(-0.02, 0.10, h)) * 0.55);
+        // Blend just above the ground horizon into the scene fog so distant streets dissolve into the sky.
+        col = mix(col, fogColor, (1.0 - smoothstep(-drop - 0.02, -drop + 0.07, a)) * 0.55);
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,

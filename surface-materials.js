@@ -84,7 +84,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
 }
 
 export async function installSurfaceMaterials(city, renderer, loadTexture) {
-  const kinds = ['grass-v2', 'asphalt', 'pavers-v2', 'curb-v2', 'tactile-v2'];
+  const kinds = ['grass-v2', 'asphalt', 'curb-v2'];
   const textures = await Promise.all(kinds.map(async kind => {
     const [base, detail] = await Promise.all(['base', 'detail'].map(channel =>
       loadTexture(`./assets/surfaces/${kind}-${channel}-512.webp`)));
@@ -99,7 +99,25 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     }
     return { base, detail };
   }));
-  const [grass, asphalt, pavers, curb, tactile] = textures;
+  const [grass, asphalt, curb] = textures;
+  // Sidewalk set from tools/build-sidewalk-v3.ps1: staggered grey stone slabs
+  // and yellow guidance tiles whose bars run along the street.
+  const [slab, tactile] = await Promise.all(['slab-v3', 'tactile-v3'].map(async kind => {
+    const [base, detail] = await Promise.all([
+      loadTexture(`./assets/surfaces/${kind}-base-512.jpg`),
+      loadTexture(`./assets/surfaces/${kind}-normal-512.png`)]);
+    for (const texture of [base, detail]) {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      texture.colorSpace = texture === base ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      texture.needsUpdate = true;
+    }
+    return { base, detail };
+  }));
+  // Baked sidewalk UVs: one u unit = 8 scene units along the street, one v unit
+  // = 6 across. One slab texture (4x4 slabs) spans 10x10, i.e. 2.5-unit slabs.
+  for (const texture of [slab.base, slab.detail]) texture.repeat.set(8 / 10, 6 / 10);
   const nap = await loadTexture('./assets/surfaces/grass-nap-v1-512.webp');
   nap.wrapS = nap.wrapT = THREE.RepeatWrapping;
   nap.colorSpace = THREE.NoColorSpace;
@@ -115,10 +133,10 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     City_Grass: surfaceMaterial('City_Grass', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Meadow: surfaceMaterial('City_Meadow', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Road: surfaceMaterial('City_Road', asphalt.base, asphalt.detail, { color: 0x8a8e98, period: 12, strength: .16 }),
-    City_Sidewalk: pavingMaterial('City_Sidewalk', pavers, .65),
-    // Longitudinal ribs, bevels and stone joints are texture/normal detail;
+    City_Sidewalk: pavingMaterial('City_Sidewalk', slab, .9),
+    // Guidance bars, bevels and stone joints are texture/normal detail;
     // all three surfaces stay in the same batched road mesh.
-    City_Tactile: pavingMaterial('City_Tactile', tactile, .8),
+    City_Tactile: pavingMaterial('City_Tactile', tactile, 1.0),
     City_Curb: pavingMaterial('City_Curb', curb, .55)
   };
   const counts = Object.fromEntries(Object.keys(replacements).map(name => [name, 0]));

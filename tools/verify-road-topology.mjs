@@ -5,7 +5,7 @@ import { loadCity } from './load-city.mjs';
 import { decodeRoadGeometry } from '../road-geometry.js';
 
 const { road } = loadCity();
-const file = process.argv[2] || 'assets/roads-rounded-v12.bin';
+const file = process.argv[2] || 'assets/roads-rounded-v14.bin';
 const bytes = fs.readFileSync(file);
 const geometry = decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 const pos = geometry.attributes.position;
