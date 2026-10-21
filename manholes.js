@@ -4,7 +4,7 @@ import * as THREE from 'three';
 // One instanced draw for all covers: a flat textured disc a hair above the
 // road (asphalt faces are chords of the 602 sphere, so 602.02 always clears
 // them) with a polygon offset against distant z-fighting.
-export const MANHOLE_TEXTURES = ['./assets/surfaces/manhole-v1-base-512.jpg', './assets/surfaces/manhole-v1-normal-512.png'];
+export const MANHOLE_TEXTURES = ['./assets/surfaces/manhole-v2-base-512.jpg', './assets/surfaces/manhole-v1-normal-512.png'];
 const RADIUS = 2.3, HEIGHT = 602.02;
 const SPACING = 110, END_CLEARANCE = 34;
 

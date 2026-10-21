@@ -191,6 +191,17 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     normalScale: new THREE.Vector2(strength, strength), color: 0xffffff,
     roughness: .92, metalness: 0, side: THREE.DoubleSide
   });
+  // Kerb stones read as a pale cut-concrete band between the grey slabs and the
+  // asphalt: the curb texture keeps its grain but is lifted toward warm off-white.
+  const curbMaterial = textures => {
+    const material = pavingMaterial('City_Curb', textures, .55);
+    material.onBeforeCompile = shader => {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+        diffuseColor.rgb = mix(vec3(.80, .78, .73), vec3(1.0, .99, .96), smoothstep(.25, .55, diffuseColor.g));`);
+    };
+    material.customProgramCacheKey = () => 'curb-light-v1';
+    return material;
+  };
   const replacements = {
     City_Grass: surfaceMaterial('City_Grass', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
     City_Meadow: surfaceMaterial('City_Meadow', grass.base, grass.detail, { color: 0xffffff, period: 14, strength: .18, grass: true, nap }),
@@ -199,7 +210,7 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     // Guidance bars, bevels and stone joints are texture/normal detail;
     // all three surfaces stay in the same batched road mesh.
     City_Tactile: pavingMaterial('City_Tactile', tactile, 1.0),
-    City_Curb: pavingMaterial('City_Curb', curb, .55),
+    City_Curb: curbMaterial(curb),
     City_RoadLine: wornPaintMaterial(wear)
   };
   const counts = Object.fromEntries(Object.keys(replacements).map(name => [name, 0]));

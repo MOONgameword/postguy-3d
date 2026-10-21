@@ -5,11 +5,11 @@
 # Manhole cover textures (512x512). Both source maps are cropped to the cover's
 # circle so it fills the texture exactly: CircleGeometry's UVs are the inscribed
 # circle of the unit square, so no alpha channel is needed.
-#   井盖.png      485x487, circle bbox x 1..484, y 0..485 (transparent outside)
+#   井盖2.png     485x487, flat cel-shaded colours, circle bbox x 2..484, y 0..484 (transparent outside)
 #   井盖法线.png  512x512, circle bbox x 8..495, y 8..496
 Add-Type -AssemblyName System.Drawing
 $jobs = @(
-  @{ In = '井盖.png';     Out = 'manhole-v1-base-512.jpg';   Crop = @(1, 0, 484, 486) },
+  @{ In = '井盖2.png';    Out = 'manhole-v2-base-512.jpg';   Crop = @(2, 0, 483, 485) },
   @{ In = '井盖法线.png'; Out = 'manhole-v1-normal-512.png'; Crop = @(8, 8, 488, 489) }
 )
 $jpeg = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }
