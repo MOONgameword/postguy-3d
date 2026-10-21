@@ -1,20 +1,22 @@
 import * as THREE from 'three';
 
 // All colours are authored in sRGB; Three converts them to linear light.
-// The sky is an equirectangular panorama (assets/sky-bright-day.jpg, 2:1).
-// SKY_SUN is where the sun sits in that image; the panorama is spun every frame
-// so its painted sun lines up with the DirectionalLight, and the light's
-// elevation matches the painted sun's height (≈23°).
-const SKY_URL = './assets/sky-bright-day.jpg?v=20261020';
-const SKY_SUN_U = 325 / 1600;
-const SKY_SUN_ANGLE = (0.5 - 297 / 800) * Math.PI;
+// The sky is an equirectangular panorama (assets/sky-lantian.jpg, 2560×1280).
+// SKY_SUN is where the sun sits in that image (measured centroid); the panorama
+// is spun every frame so its painted sun lines up with the DirectionalLight, and
+// the light's elevation matches the painted sun's height (≈23°).
+const SKY_URL = './assets/sky-lantian.jpg?v=20261021';
+const SKY_SUN_U = 534.5 / 2560;
+const SKY_SUN_ANGLE = (0.5 - 474.9 / 1280) * Math.PI;
 const SKY_SUN_ELEVATION = 0.92 * Math.tan(SKY_SUN_ANGLE);
-// On the small planet the ground horizon sits ~12° below the local horizontal,
-// so the panorama's own horizon (a white cloud sea) showed as a pale band above
-// the hills. The image is pulled down by SKY_DROP: its horizon is placed at
-// -SKY_DROP, the band between there and the painted sun is stretched to fit,
-// and everything from the sun up (and the light direction) stays where it was.
-const SKY_DROP = THREE.MathUtils.degToRad(10);
+// On the small planet the ground horizon sits ~12° below the local horizontal.
+// This panorama already has open sky and cumulus down to about -23° (its cloud
+// sea starts below that), so it is used unwarped (SKY_DROP = 0). A non-zero
+// SKY_DROP would pull the image's horizon down to -SKY_DROP, stretching the band
+// up to the painted sun and leaving the sun and everything above it in place.
+const SKY_DROP = 0;
+// Where the hills actually meet the sky; the fog blend sits just above it.
+const GROUND_DIP = THREE.MathUtils.degToRad(10);
 
 export const PALETTES = {
   day: {
@@ -39,6 +41,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
     sunU: { value: SKY_SUN_U },
     sunAngle: { value: SKY_SUN_ANGLE },
     drop: { value: SKY_DROP },
+    groundDip: { value: GROUND_DIP },
     fogColor: { value: new THREE.Color() },
     up: { value: new THREE.Vector3(0, 1, 0) },
     east: { value: new THREE.Vector3(1, 0, 0) }, north: { value: new THREE.Vector3(0, 0, 1) },
@@ -53,7 +56,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
       }`,
     fragmentShader: `
       uniform sampler2D panorama;
-      uniform float sunU, sunAngle, drop;
+      uniform float sunU, sunAngle, drop, groundDip;
       uniform vec3 fogColor, up, east, north, sunDir;
       varying vec3 vDirection;
       const float INV_TAU = 0.15915494;
@@ -70,7 +73,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
         vec2 uv = vec2(fract((azimuth - sunAzimuth) * INV_TAU + sunU), 0.5 + image / SKY_PI);
         vec3 col = texture2D(panorama, uv).rgb;
         // Blend just above the ground horizon into the scene fog so distant streets dissolve into the sky.
-        col = mix(col, fogColor, (1.0 - smoothstep(-drop - 0.02, -drop + 0.07, a)) * 0.55);
+        col = mix(col, fogColor, (1.0 - smoothstep(-groundDip - 0.02, -groundDip + 0.07, a)) * 0.55);
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,

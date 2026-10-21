@@ -58,9 +58,9 @@
  顺带一提窗口边框会吃掉 16×95：-W 900 -H 480 的真实视口是 884×385。
 
 【画面风格】
- 天空是跟着镜头走的反面球，贴 assets/sky-bright-day.jpg（2:1 等距柱面全景，4096×2048）。
+ 天空是跟着镜头走的反面球，贴 assets/sky-lantian.jpg（2:1 等距柱面全景，2560×1280）。
  着色器按本地「上 / 东 / 北」算方位角和仰角去采样，所以跑到星球哪一面地平线都在原位；
- 全景图每帧绕「上」轴旋转，让图里画的太阳（u=325/1600, v=297/800，仰角约 23°）
+ 全景图每帧绕「上」轴旋转，让图里画的太阳（u=534.5/2560, v=474.9/1280，仰角约 23°）
  正好对准平行光方向，地上影子的朝向和天上的太阳一致。地平线附近混一点雾色，远处街区融进天空。
  光照是 NPR 赛璐璐（npr-shading.js）：改的是 three 的公共 ShaderChunk，所有受光材质
  统一变成「亮 / 中 / 暗」三档平涂色阶，不换材质、不增加绘制次数。投影不再在暗部上面
@@ -150,7 +150,7 @@
 
 【资源】
  assets/planet-city.fbx + Textures.png + texture_gradient.png  星球城市
- assets/sky-bright-day.jpg                         天空球全景图（2:1 等距柱面）
+ assets/sky-lantian.jpg                             天空球全景图（2:1 等距柱面）
  assets/car-city.fbx                               63 个汽车车款（贴图共用 Textures.png）
  assets/motuo.fbx + motuo_basecolor.jpg            电动车
  assets/boy-final.fbx + boy-final_basecolor.jpg    邮差（自带 sit/walk/run/jump/wait 动画）
