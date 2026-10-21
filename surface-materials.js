@@ -186,20 +186,44 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
   wear.minFilter = THREE.LinearMipmapLinearFilter;
   wear.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   wear.needsUpdate = true;
+  const granite = await loadTexture('./assets/surfaces/curb-granite-v1-512.png');
+  granite.wrapS = granite.wrapT = THREE.RepeatWrapping;
+  granite.colorSpace = THREE.NoColorSpace;
+  granite.minFilter = THREE.LinearMipmapLinearFilter;
+  granite.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  granite.needsUpdate = true;
   const pavingMaterial = (name, textures, strength) => new THREE.MeshStandardMaterial({
     name, map: textures.base, normalMap: textures.detail,
     normalScale: new THREE.Vector2(strength, strength), color: 0xffffff,
     roughness: .92, metalness: 0, side: THREE.DoubleSide
   });
-  // Kerb stones read as a pale cut-concrete band between the grey slabs and the
-  // asphalt: the curb texture keeps its grain but is lifted toward warm off-white.
-  const curbMaterial = textures => {
+  // Kerb stones: light speckled granite blocks with dark joints, like cut stone
+  // kerbs. Grain is projected in world space (2.5-unit tile); the baked curb UV
+  // u is an integer at every block boundary (~6 units), so joints and a slight
+  // per-block tone shift come from u alone and follow straights and corners.
+  const curbMaterial = (textures, granite) => {
     const material = pavingMaterial('City_Curb', textures, .55);
+    material.map = null;
     material.onBeforeCompile = shader => {
-      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
-        diffuseColor.rgb = mix(vec3(.80, .78, .73), vec3(1.0, .99, .96), smoothstep(.25, .55, diffuseColor.g));`);
+      shader.uniforms.curbGranite = { value: granite };
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec2 curbUv; varying vec3 curbPosition;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\ncurbUv = uv; curbPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying vec2 curbUv; varying vec3 curbPosition; uniform sampler2D curbGranite;')
+        .replace('#include <map_fragment>', `#include <map_fragment>
+        vec3 cu = normalize(curbPosition);
+        vec3 cw = pow(abs(cu), vec3(4.0)); cw /= dot(cw, vec3(1.0));
+        vec3 cp = curbPosition / 7.0;
+        float grain = texture2D(curbGranite, cp.yz).r * cw.x + texture2D(curbGranite, cp.xz).r * cw.y + texture2D(curbGranite, cp.xy).r * cw.z;
+        float block = floor(curbUv.x);
+        float blockTone = .94 + .08 * fract(sin(block * 91.7) * 4375.85);
+        float jointDistance = min(fract(curbUv.x), 1.0 - fract(curbUv.x)) * 6.0;
+        float joint = smoothstep(.035, .085, jointDistance);
+        diffuseColor.rgb = vec3(mix(.16, .78, grain)) * vec3(.99, 1.0, 1.02) * blockTone;
+        diffuseColor.rgb *= mix(.42, 1.0, joint);`);
     };
-    material.customProgramCacheKey = () => 'curb-light-v1';
+    material.customProgramCacheKey = () => 'curb-granite-v1';
     return material;
   };
   const replacements = {
@@ -210,7 +234,7 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     // Guidance bars, bevels and stone joints are texture/normal detail;
     // all three surfaces stay in the same batched road mesh.
     City_Tactile: pavingMaterial('City_Tactile', tactile, 1.0),
-    City_Curb: curbMaterial(curb),
+    City_Curb: curbMaterial(curb, granite),
     City_RoadLine: wornPaintMaterial(wear)
   };
   const counts = Object.fromEntries(Object.keys(replacements).map(name => [name, 0]));

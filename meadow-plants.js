@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { lakeMetric } from './lakeside.js?v=20261021-norock';
-import { TURF_GLSL } from './surface-materials.js?v=20261021-curb';
+import { TURF_GLSL } from './surface-materials.js?v=20261021-granite';
 
 export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
 
