@@ -5,7 +5,7 @@ import {loadCity} from './load-city.mjs';
 import {buildRoundedJunctions} from '../rounded-junctions.js';
 import {decodeRoadGeometry} from '../road-geometry.js';
 const {road}=loadCity(),plan=buildRoundedJunctions(road);
-const data=fs.readFileSync(new URL('../assets/roads-rounded-v15.bin',import.meta.url));
+const data=fs.readFileSync(new URL('../assets/roads-rounded-v16.bin',import.meta.url));
 const geo=decodeRoadGeometry(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
 function materialMesh(name){
  const group=geo.groups.find(g=>road.material[g.materialIndex].name===name),g=new T.BufferGeometry();
@@ -41,7 +41,9 @@ for(const c of plan.corridors){
  }
  if(from<c.end)intervals.push([from,c.end]);
  for(const [a,b] of intervals)for(let s=a;s+13.5/600<b;s+=18/600){
-  const p=c.at(s+4.5/600,0,602),gap=c.at(s+13.5/600,0,602);
+  // Slightly off the dash centre: the worn-paint split puts a shared vertex
+  // exactly there, and a ray through a vertex can miss all four triangles.
+  const p=c.at(s+4.4/600,.1,602),gap=c.at(s+13.5/600,0,602);
   const asphaltHit=hit(asphalt,p),paintHit=hit(paint,p);
   assert.ok(asphaltHit.length&&paintHit.length,'White centre dash on every road');
   assert.equal(hit(paint,gap).length,0,'Centre dash must have an unpainted gap');

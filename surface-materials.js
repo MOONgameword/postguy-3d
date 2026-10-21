@@ -127,15 +127,15 @@ function wornPaintMaterial(wear) {
           vec3 pp = paintPosition / 3.5;
           vec2 erosion = texture2D(paintWear, pp.yz).rg * pw.x + texture2D(paintWear, pp.xz).rg * pw.y + texture2D(paintWear, pp.xy).rg * pw.z;
           float edge = min(paintEdge.x, paintEdge.y * 0.6);
-          // Wear only bites ~0.4 units into the edges; inside, the odd pinhole.
-          float keep = mix(0.62, 0.1, smoothstep(0.0, 0.42, edge));
+          // Light wear: only ~0.28 units of the edge chips, rare pinholes inside.
+          float keep = mix(0.5, 0.05, smoothstep(0.0, 0.28, edge));
           if (erosion.r < keep) discard;
           // Old paint: a little grime in the low spots, slightly greyer near the bites.
           diffuseColor.rgb *= mix(0.84, 1.0, erosion.g) * mix(0.9, 1.0, smoothstep(keep, keep + 0.12, erosion.r));
         }
       `);
   };
-  material.customProgramCacheKey = () => 'road-paint-worn-v1';
+  material.customProgramCacheKey = () => 'road-paint-worn-v2';
   return material;
 }
 

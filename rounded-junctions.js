@@ -232,8 +232,19 @@ export function buildRoundedJunctions(mesh) {
       const tactileA = sectorPath(sector, sector.a.half + TACTILE_GAP, sector.b.half + TACTILE_GAP);
       const tactileB = sectorPath(sector, sector.a.half + TACTILE_GAP + TACTILE_WIDTH, sector.b.half + TACTILE_GAP + TACTILE_WIDTH);
       ribbon(j, tactileA, tactileB, WALK, WALK, tactileIndex, front);
-      ribbon(j,sectorPath(sector,sector.a.half-3.7,sector.b.half-3.7),
-        sectorPath(sector,sector.a.half-2.3,sector.b.half-2.3),ROAD+.02,ROAD+.02,lineIndex);
+      // Corner edge line, split down its centre so uv.x is the distance to the
+      // nearer side. It runs on into the corridor edge lines, so no worn ends.
+      const lineEdges = [3.7, 3.0, 2.3].map(o => sectorPath(sector, sector.a.half - o, sector.b.half - o));
+      for (let side = 0; side < 2; side++) {
+        const pa = lineEdges[side], pb = lineEdges[side + 1];
+        const ua = [side ? .7 : 0, 100], ub = [side ? 0 : .7, 100];
+        for (let k = 0; k < pa.length - 1; k++) {
+          const a = world(j, pa[k], ROAD + .02), b = world(j, pa[k + 1], ROAD + .02);
+          const c = world(j, pb[k + 1], ROAD + .02), d = world(j, pb[k], ROAD + .02);
+          triangle(lineIndex, a, b, c, [ua, ua, ub], true);
+          triangle(lineIndex, a, c, d, [ua, ub, ub], true);
+        }
+      }
     }
     // Earcut also handles the outside of two-arm bends where the origin need not
     // lie inside the drivable polygon. A fan at the origin would create overlaps.
@@ -327,16 +338,25 @@ export function buildRoundedJunctions(mesh) {
     corridors.push({ j, other, arm, reverse, start, end, side, crossings, at });
   }
   // Generate dividers from lane counts instead of retaining old four-lane paint.
+  // Every marking stores uv = (distance to nearer long side, distance to nearer
+  // end) in scene units for the worn-paint shader. Continuous edge lines flow
+  // into the junction arcs, so their ends are not worn (open = true).
   for(const c of corridors) {
-    const paint=(from,to,w,width)=>{
-      const steps=Math.max(1,Math.ceil((to-from)*BASE/6));
+    const paint=(from,to,w,width,open=false)=>{
+      const steps=Math.max(2,2*Math.ceil((to-from)*BASE/12));
+      const halfW=width/2;
+      const along=s=>open?100:Math.min(s-from,to-s)*BASE;
       for(let k=0;k<steps;k++) {
         const a=from+(to-from)*k/steps,b=from+(to-from)*(k+1)/steps;
-        quad(lineIndex,c.at(a,w-width/2,ROAD),c.at(b,w-width/2,ROAD),
-          c.at(b,w+width/2,ROAD),c.at(a,w+width/2,ROAD));
+        for(const [w0,w1,e0,e1] of [[w-halfW,w,0,halfW],[w,w+halfW,halfW,0]]){
+          const pa=c.at(a,w0,ROAD),pb=c.at(b,w0,ROAD),pc=c.at(b,w1,ROAD),pd=c.at(a,w1,ROAD);
+          const ua=[e0,along(a)],ub=[e0,along(b)],uc=[e1,along(b)],ud=[e1,along(a)];
+          triangle(lineIndex,pa,pb,pc,[ua,ub,uc],true);
+          triangle(lineIndex,pa,pc,pd,[ua,uc,ud],true);
+        }
       }
     };
-    for(const sign of [-1,1]) paint(c.start,c.end,sign*(c.arm.half-3),1.4);
+    for(const sign of [-1,1]) paint(c.start,c.end,sign*(c.arm.half-3),1.4,true);
     const intervals=[]; let from=c.start;
     for(const x of c.crossings.slice().sort((a,b)=>a.from-b.from)) {
       if(x.from-1/BASE>from) intervals.push([from,x.from-1/BASE]);
