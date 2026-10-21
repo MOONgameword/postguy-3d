@@ -14,6 +14,7 @@ import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261021-granite';
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
+import { installFootbridges, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-01';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
@@ -2243,6 +2244,18 @@ async function boot() {
   });
   if (DEBUG) console.info('Street components:', streetKitStats);
 
+  setProgress(0.577, '架起人行天桥…');
+  /* 四座双梯天桥：放在四条相距较远的双车道路段中点，楼梯塔落在两侧人行道上 */
+  const footbridgeSource = await loadOne(FOOTBRIDGE_URL);
+  const footbridges = installFootbridges(city, footbridgeSource, trafficLanes, {
+    corridors: [0, 7, 13, 14],
+    makeMaterial: (name, { color, glass }) => pastel(new THREE.MeshLambertMaterial({
+      name, color, transparent: !!glass, opacity: glass ? .42 : 1, depthWrite: !glass,
+      side: glass ? THREE.DoubleSide : THREE.FrontSide
+    }))
+  });
+  if (DEBUG) console.info('Footbridges:', footbridges);
+
   const grassLevel = raiseGrassLevel(city);
   if (DEBUG) console.info('Grass level:', grassLevel);
   setProgress(0.58, '种下木纹树干…');
@@ -2300,6 +2313,12 @@ async function boot() {
   // debug flag is off; their small shells keep the authored kit readable.
   const streetComponents = city.getObjectByName('StreetComponents_14_Source');
   if (streetComponents) addOutline(streetComponents, 0.015 * S, true);
+  /* 天桥：先套反向壳描出剪影，再在表面画折角墨线（玻璃单独一块网格，不描边） */
+  footbridges.root.traverse(o => {
+    if (!o.isMesh || o.userData.footbridge !== 'body') return;
+    addOutline(o, 0.015 * S, true);
+    if (OBJECT_INK) applyObjectInk(o, 1.0);
+  });
   /* 地平线剔除要在描边之后建表：它顺手记下每个物体的描边壳，好按距离单独关掉 */
   prepareHorizon(city);
   await new Promise(r => setTimeout(r, 16));

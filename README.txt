@@ -152,6 +152,7 @@
  assets/planet-city.fbx + Textures.png + texture_gradient.png  星球城市
  assets/sky-lantian.jpg                             天空球全景图（2:1 等距柱面）
  assets/car-city.fbx                               63 个汽车车款（贴图共用 Textures.png）
+ assets/footbridge-v1.fbx                          双梯天桥（4 座，footbridges.js：放在 0/7/13/14 号双车道中点，楼梯塔落在人行道，反向壳描边 + 折角墨线，玻璃单独不描边）
  assets/motuo.fbx + motuo_basecolor.jpg            电动车
  assets/boy-final.fbx + boy-final_basecolor.jpg    邮差（自带 sit/walk/run/jump/wait 动画）
  assets/ui/*.png                                   HUD 图标（头像 / 油门 / 刹车 / 底部按钮）
