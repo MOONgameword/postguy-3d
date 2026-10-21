@@ -103,6 +103,42 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
   return material;
 }
 
+// Worn road paint. Crosswalk stripes carry uv = distance (scene units) to the
+// nearest long / short edge (baked in rounded-junctions.js); other markings
+// carry uv >= 100 and stay crisp. A tileable erosion mask in world space sets
+// how much paint is left: the survival threshold rises toward the edges, so
+// edges chip into ragged bites and a few small holes open inside the stripe.
+function wornPaintMaterial(wear) {
+  const material = new THREE.MeshLambertMaterial({ name: 'City_RoadLine', color: 0xf1eee6, side: THREE.DoubleSide });
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -2;
+  material.onBeforeCompile = shader => {
+    shader.uniforms.paintWear = { value: wear };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 paintEdge; varying vec3 paintPosition;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\npaintEdge = uv; paintPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 paintEdge; varying vec3 paintPosition; uniform sampler2D paintWear;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        if (paintEdge.x < 50.0) {
+          vec3 pu = normalize(paintPosition);
+          vec3 pw = pow(abs(pu), vec3(4.0)); pw /= dot(pw, vec3(1.0));
+          vec3 pp = paintPosition / 3.5;
+          vec2 erosion = texture2D(paintWear, pp.yz).rg * pw.x + texture2D(paintWear, pp.xz).rg * pw.y + texture2D(paintWear, pp.xy).rg * pw.z;
+          float edge = min(paintEdge.x, paintEdge.y * 0.6);
+          // Wear only bites ~0.4 units into the edges; inside, the odd pinhole.
+          float keep = mix(0.62, 0.1, smoothstep(0.0, 0.42, edge));
+          if (erosion.r < keep) discard;
+          // Old paint: a little grime in the low spots, slightly greyer near the bites.
+          diffuseColor.rgb *= mix(0.84, 1.0, erosion.g) * mix(0.9, 1.0, smoothstep(keep, keep + 0.12, erosion.r));
+        }
+      `);
+  };
+  material.customProgramCacheKey = () => 'road-paint-worn-v1';
+  return material;
+}
+
 export async function installSurfaceMaterials(city, renderer, loadTexture) {
   const kinds = ['grass-v2', 'asphalt', 'curb-v2'];
   const textures = await Promise.all(kinds.map(async kind => {
@@ -144,6 +180,12 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
   nap.minFilter = THREE.LinearMipmapLinearFilter;
   nap.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   nap.needsUpdate = true;
+  const wear = await loadTexture('./assets/surfaces/paint-wear-v1-512.png');
+  wear.wrapS = wear.wrapT = THREE.RepeatWrapping;
+  wear.colorSpace = THREE.NoColorSpace;
+  wear.minFilter = THREE.LinearMipmapLinearFilter;
+  wear.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  wear.needsUpdate = true;
   const pavingMaterial = (name, textures, strength) => new THREE.MeshStandardMaterial({
     name, map: textures.base, normalMap: textures.detail,
     normalScale: new THREE.Vector2(strength, strength), color: 0xffffff,
@@ -157,7 +199,8 @@ export async function installSurfaceMaterials(city, renderer, loadTexture) {
     // Guidance bars, bevels and stone joints are texture/normal detail;
     // all three surfaces stay in the same batched road mesh.
     City_Tactile: pavingMaterial('City_Tactile', tactile, 1.0),
-    City_Curb: pavingMaterial('City_Curb', curb, .55)
+    City_Curb: pavingMaterial('City_Curb', curb, .55),
+    City_RoadLine: wornPaintMaterial(wear)
   };
   const counts = Object.fromEntries(Object.keys(replacements).map(name => [name, 0]));
   city.traverse(mesh => {

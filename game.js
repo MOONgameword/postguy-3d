@@ -12,9 +12,10 @@ import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.j
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
-import { installSurfaceMaterials } from './surface-materials.js?v=20261021-soft';
+import { installSurfaceMaterials } from './surface-materials.js?v=20261021-paint';
+import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-01';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-soft';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
 import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
@@ -2200,7 +2201,7 @@ async function boot() {
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
   const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas, crosswalkSignals] = await Promise.all([
-    withRetry('./assets/roads-rounded-v14.bin', () => fetchAsset('./assets/roads-rounded-v14.bin')),
+    withRetry('./assets/roads-rounded-v15.bin', () => fetchAsset('./assets/roads-rounded-v15.bin')),
     withRetry('./assets/junction-furniture-v4.json', () => fetchAsset('./assets/junction-furniture-v4.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
@@ -2229,7 +2230,7 @@ async function boot() {
     streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
   if (DEBUG) console.info('Roadside buildings:', buildingStats);
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
-  if (DEBUG) console.info('Street layout release: 20261015-frontage-v4 (roads v14, lamps v6, signals v2, buildings v2)');
+  if (DEBUG) console.info('Street layout release: 20261015-frontage-v4 (roads v15, lamps v6, signals v2, buildings v2)');
 
   setProgress(0.575, '替换路灯与街道组件…');
   const streetKit = await loadGLB('./assets/street-components-v1.glb');
@@ -2258,6 +2259,8 @@ async function boot() {
   setProgress(0.59, '铺设草地与街道纹理…');
   const surfaces = await installSurfaceMaterials(city, renderer, loadTex);
   if (DEBUG) console.info('Surface textures:', surfaces);
+  const manholes = createManholes(scene, trafficLanes, await Promise.all(MANHOLE_TEXTURES.map(loadTex)), renderer);
+  if (DEBUG) console.info('Manholes:', manholes.count);
   bakeGround(city);
   await new Promise(r => setTimeout(r, 16));
 

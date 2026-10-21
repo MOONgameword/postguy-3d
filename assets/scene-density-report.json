@@ -4,16 +4,16 @@
     "trees": 1043,
     "groundPlants": 865,
     "sidewalkProps": 168,
-    "meshes": 2848,
-    "triangles": 2507548
+    "meshes": 2847,
+    "triangles": 2508329
   },
   "after": {
     "buildings": 276,
     "trees": 696,
     "groundPlants": 0,
     "sidewalkProps": 0,
-    "meshes": 1330,
-    "triangles": 1500600
+    "meshes": 1329,
+    "triangles": 1501381
   },
   "removed": {
     "buildings": 138,
@@ -23,7 +23,7 @@
     "meshes": 1518,
     "triangles": 1006948
   },
-  "triangleReductionPercent": 40.2,
+  "triangleReductionPercent": 40.1,
   "removedObstacleProbes": 653,
   "collisionObjects": 1297,
   "result": "PASS"

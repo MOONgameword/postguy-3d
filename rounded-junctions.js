@@ -157,7 +157,12 @@ export function buildRoundedJunctions(mesh) {
     const q = p.clone().applyMatrix4(inverse);
     return q.set(Math.fround(q.x), Math.fround(q.y), Math.fround(q.z));
   };
-  function triangle(index, a, b, c, uv = [[0, 0], [0, 0], [0, 0]]) {
+  // Road paint UVs: crosswalk stripes store the distance (scene units) to the
+  // nearest long / short stripe edge, so the paint shader can wear the edges.
+  // All other markings get PAINT_PLAIN, which the shader leaves untouched.
+  const PAINT_PLAIN = [100, 100];
+  function triangle(index, a, b, c, uv = [[0, 0], [0, 0], [0, 0]], paintUv = false) {
+    if (index === lineIndex && !paintUv) uv = [PAINT_PLAIN, PAINT_PLAIN, PAINT_PLAIN];
     const la = local(a), lb = local(b), lc = local(c);
     const outward = a.clone().add(b).add(c).normalize().applyMatrix3(normalToLocal).normalize();
     const face = lb.clone().sub(la).cross(lc.clone().sub(la));
@@ -264,10 +269,19 @@ export function buildRoundedJunctions(mesh) {
       if(crossing.from<start||crossing.to>end)throw new Error('Crosswalk exceeds road corridor');
       const stripes = half <= SIDE_HALF + 0.1 ? 6 : 9;
       const step = (2 * crossing.width - 10) / stripes, stripeWidth = step * 0.52;
+      const length = (crossing.to - crossing.from) * BASE;
       for(let stripe=0;stripe<stripes;stripe++){
         const w = -crossing.width + 5 + stripe * step;
-        quad(lineIndex,at(crossing.from,w,ROAD),at(crossing.to,w,ROAD),
-          at(crossing.to,w+stripeWidth,ROAD),at(crossing.from,w+stripeWidth,ROAD));
+        // 2x2 quads with the stripe centre lines as interior vertices: the
+        // linearly interpolated UV is then exactly the distance to the nearest edge.
+        const across = [[w, 0], [w + stripeWidth / 2, stripeWidth / 2], [w + stripeWidth, 0]];
+        const along = [[crossing.from, 0], [(crossing.from + crossing.to) / 2, length / 2], [crossing.to, 0]];
+        for (let i = 0; i < 2; i++) for (let k = 0; k < 2; k++) {
+          const corner = (ai, ki) => [at(along[ki][0], across[ai][0], ROAD), [across[ai][1], along[ki][1]]];
+          const [pa, ua] = corner(i, k), [pb, ub] = corner(i, k + 1), [pc, uc] = corner(i + 1, k + 1), [pd, ud] = corner(i + 1, k);
+          triangle(lineIndex, pa, pb, pc, [ua, ub, uc], true);
+          triangle(lineIndex, pa, pc, pd, [ua, uc, ud], true);
+        }
       }
       crosswalks.push({...crossing,corridor:corridors.length,stripes,
         position:at((crossing.from+crossing.to)/2,0,ROAD).toArray()});

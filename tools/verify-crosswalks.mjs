@@ -5,7 +5,7 @@ import {loadCity} from './load-city.mjs';
 import {buildRoundedJunctions} from '../rounded-junctions.js';
 import {decodeRoadGeometry} from '../road-geometry.js';
 const {road}=loadCity(),plan=buildRoundedJunctions(road);
-const data=fs.readFileSync(new URL('../assets/roads-rounded-v14.bin',import.meta.url));
+const data=fs.readFileSync(new URL('../assets/roads-rounded-v15.bin',import.meta.url));
 const geo=decodeRoadGeometry(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
 function materialMesh(name){
  const group=geo.groups.find(g=>road.material[g.materialIndex].name===name),g=new T.BufferGeometry();

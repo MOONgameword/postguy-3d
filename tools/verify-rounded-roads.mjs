@@ -9,7 +9,7 @@ import { isLegacySidewalkProp } from '../scene-density.js';
 const { city, road } = loadCity();
 const plan = buildRoundedJunctions(road);
 assert.deepEqual([plan.stats.junctions, plan.stats.corners, plan.stats.corridors], [10, 30, 15]);
-const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v14.bin', import.meta.url));
+const bytes = fs.readFileSync(new URL('../assets/roads-rounded-v15.bin', import.meta.url));
 const geometry = decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 const positions = geometry.attributes.position, normals = geometry.attributes.normal;
 const sidewalkGroup=geometry.groups.find(g=>road.material[g.materialIndex].name==='City_Sidewalk');
