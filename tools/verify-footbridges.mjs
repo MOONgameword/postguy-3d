@@ -81,3 +81,70 @@ assert.ok(Math.abs(up.end) < .5, 'Walker comes back down to the sidewalk');
 assert.ok(off.stuck !== null, 'Deck railing blocks walking off the side');
 assert.ok(under.stuck === null && under.top < .01, 'Road under the deck is clear');
 console.log(JSON.stringify({ result: 'PASS', bridges: res.count, laneSamples, climb: +up.top.toFixed(2) }));
+
+// Both stair approaches, both towers and every planet orientation must support
+// the bike's full collision radius. Also ensure the long deck is one plane.
+for (const {mesh,grid} of res.walkers) {
+  assert.equal(grid.flights,4);
+  const ys=[];
+  for(let x=-29;x<=29;x+=.5) ys.push(grid.floorAt(x,0));
+  assert.ok(Math.max(...ys)-Math.min(...ys)<.0001,'Deck and top landings are coplanar');
+  for(const side of [-1,1]) for(const entrance of [-1,1]) {
+    const path=[...line(side*towerX,entrance*21,side*towerX,0),...line(side*towerX,0,-side*towerX,0),...line(-side*towerX,0,-side*towerX,-entrance*21)];
+    let feet=W, top=0;
+    for(const [x,z] of path){
+      const d=new T.Vector3(x,0,z).applyMatrix4(mesh.matrixWorld).normalize();
+      assert.equal(walk.blocked(d,feet,2.1),false,`Bike path blocked ${mesh.name} ${x},${z}`);
+      feet=Math.max(W,walk.support(d,feet));top=Math.max(top,feet-W);
+    }
+    assert.ok(top>9&&Math.abs(feet-W)<.5,'Bike goes up, crosses, and descends');
+  }
+  // Sample every 1 cm of the main ramp: no half-unit tread-height jumps.
+  for(const sign of [-1,1]) {
+    let last=grid.floorAt(towerX,sign*17.8);
+    for(let z=17.79;z>3.7;z-=.01){
+      const y=grid.floorAt(towerX,sign*z);
+      assert.ok(Number.isFinite(y)&&Math.abs(y-last)<.015,'Continuous ramp support');last=y;
+    }
+  }
+}
+console.log('PASS: flat deck, 16 bike crossings, continuous ramps');
+// Exercise the runtime movement functions themselves, including height updates
+// during swept bike motion (the old code rejected every staircase footprint).
+const game=fs.readFileSync('game.js','utf8');
+const section=(a,b)=>game.slice(game.indexOf(a),game.indexOf(b,game.indexOf(a)));
+const {createCollisionWorld,sweepSphere}=await import('../collision-world.js');
+const collisionWorld=createCollisionWorld(res.root,new T.Vector3());
+const state={gr:W},foot={gr:W,h:0},PLANET={C:new T.Vector3(),R:600};
+const groundR=()=>W;
+const fUp=(q,v)=>v.set(0,1,0).applyQuaternion(q);
+const fFwd=(q,v)=>v.set(0,0,1).applyQuaternion(q);
+const fRight=(q,v)=>v.set(1,0,0).applyQuaternion(q);
+const runtime=new Function('THREE','collisionWorld','footbridgeWalk','state','foot','PLANET','groundR','sweepSphere','fUp','fFwd','fRight',`
+const CFG={bikeRadius:2.1},_lakeWorld=new THREE.Vector3(),isLakeWater=()=>false;
+const walkerFeetR=d=>(foot.gr??groundR(d))+foot.h;
+${section('const _blU =','/* 从 frame 出发')}
+${section('const _sbU =','/* ?auto')}
+return {slide,syncBody,blockedAt};
+`)(T,collisionWorld,walk,state,foot,PLANET,groundR,sweepSphere,fUp,fFwd,fRight);
+for(const {mesh} of res.walkers) for(const entrance of [-1,1]) {
+  state.gr=W;
+  const bike=new T.Object3D();
+  const path=[...line(towerX,21*entrance,towerX,0,20),...line(towerX,0,-towerX,0,50),...line(-towerX,0,-towerX,-21*entrance,20)];
+  let prev=new T.Vector3(path[0][0],0,path[0][1]).applyMatrix4(mesh.matrixWorld).normalize();
+  let top=0;
+  for(const [x,z] of path.slice(1)){
+    const target=new T.Vector3(x,0,z).applyMatrix4(mesh.matrixWorld).normalize();
+    const dot=T.MathUtils.clamp(target.dot(prev),-1,1),dist=Math.acos(dot)*600;
+    if(dist<1e-5)continue;
+    const forward=target.clone().addScaledVector(prev,-dot).normalize();
+    const q=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3().crossVectors(prev,forward),prev,forward));
+    const out=new T.Quaternion();
+    // Sweep along the great-circle tangent toward the next route sample.
+    assert.equal(runtime.slide(q,out,dist,2.1),true,'Runtime bike sweep must climb');
+    runtime.syncBody(bike,out,0,state,.133);
+    top=Math.max(top,state.gr-W);prev=fUp(out,new T.Vector3());
+  }
+  console.log({top,end:state.gr-W}); assert.ok(top>9&&state.gr-W<.7,'Runtime bike traverses entire bridge');
+}
+console.log('PASS: actual game slide/syncBody, 8 bike crossings');

@@ -14,7 +14,7 @@ import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261021-walkable';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261021-granite';
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
-import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-02';
+import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
@@ -1192,10 +1192,11 @@ function horizonCull(q) {
 
 /* ---------- 碰撞查询 ---------- */
 const _blU = new THREE.Vector3(), _blF = new THREE.Vector3(), _blR = new THREE.Vector3(), _blT = new THREE.Vector3();
-function blockedAt(q, r = CFG.bikeRadius, allowWater = false, walker = false) {
+function blockedAt(q, r = CFG.bikeRadius, allowWater = false, walker = false, bridgeFeet = null) {
   fUp(q, _blU);
-  if (collisionWorld?.blocked(_blU, r, null, walker)) return true;
-  if (walker && footbridgeWalk?.blocked(_blU, walkerFeetR(_blU), r)) return true;
+  const onBridgeQuery = walker || bridgeFeet !== null;
+  if (collisionWorld?.blocked(_blU, r, null, onBridgeQuery)) return true;
+  if (onBridgeQuery && footbridgeWalk?.blocked(_blU, bridgeFeet ?? walkerFeetR(_blU), r)) return true;
   if (allowWater) return false;
   if (isLakeWater(_lakeWorld.copy(_blU).multiplyScalar(600).add(PLANET.C))) return true;
   fFwd(q, _blF); fRight(q, _blR);
@@ -1448,14 +1449,14 @@ function dismount() {
   const side = q => { turn(q, Math.PI / 2); advance(q, 1.15 * S); turn(q, -Math.PI / 2); };
   _dmQ.copy(state.q);
   side(_dmQ);
-  if (blockedAt(_dmQ, CFG.footRadius)) {
+  if (blockedAt(_dmQ, CFG.footRadius, false, false, state.gr ?? groundR(fUp(state.q, _sbU)))) {
     _dmQ.copy(state.q);
     turn(_dmQ, -Math.PI / 2); advance(_dmQ, 1.15 * S); turn(_dmQ, Math.PI / 2);
   }
-  if (blockedAt(_dmQ, CFG.footRadius)) _dmQ.copy(state.q);
+  if (blockedAt(_dmQ, CFG.footRadius, false, false, state.gr ?? groundR(fUp(state.q, _sbU)))) _dmQ.copy(state.q);
   foot.q.copy(_dmQ);
   foot.h = 0;
-  foot.gr = undefined;                 // 换了位置，别从车的地表半径插值过来
+  foot.gr = state.gr;                  // Preserve the deck level when dismounting.
   foot.camOff = 0;
   foot.speed = 0; foot.vy = 0; foot.air = false; foot.swimming = false;
   syncBody(walker, foot.q, 0, foot, 1);
@@ -1779,7 +1780,15 @@ function syncBody(obj, q, h, ent, k) {
   let gr = groundR(_sbU);
   if (ent === foot && ent.swimming) gr = waterSurfaceR(_sbU) - 0.65 * S;
   /* 天桥楼梯 / 桥面：脚下一步之内有桥面就踩上去（桥下马路上不受影响） */
-  else if (ent === foot && footbridgeWalk) gr = Math.max(gr, footbridgeWalk.support(_sbU, (ent.gr ?? gr) + h));
+  else if ((ent === foot || ent === state) && footbridgeWalk) {
+    const support = footbridgeWalk.support(_sbU, (ent.gr ?? gr) + h);
+    if (Number.isFinite(support) && support > gr) {
+      gr = support;
+      // The collision height must follow the ramp immediately. Smoothing it
+      // behind a moving bike makes the next frame see the ramp as a wall.
+      ent.gr = gr;
+    }
+  }
   if (ent) {
     if (ent.gr === undefined || Math.abs(gr - ent.gr) > 8) ent.gr = gr;
     else ent.gr += (gr - ent.gr) * k;
@@ -1792,7 +1801,18 @@ function syncBody(obj, q, h, ent, k) {
 /* 撞墙时沿墙滑行：朝斜前方试着挪一点，但朝向不变。返回是否畅通。
    allowWater 只有步行会传：步行同时按天桥的楼梯 / 桥面 / 栏杆来判断 */
 function slide(q, out, step, r, allowWater = false) {
-  return sweepSphere(q, out, step, r, PLANET.R, allowWater ? (q, r) => blockedAt(q, r, true, true) : blockedAt);
+  const ent = allowWater ? foot : state;
+  const jumpHeight = allowWater ? foot.h : 0;
+  let feetR = (ent.gr ?? groundR(fUp(q, _sbU))) + jumpHeight;
+  const clear = sweepSphere(q, out, step, r, PLANET.R, (trial, radius) => {
+    if (blockedAt(trial, radius, allowWater, allowWater, feetR)) return true;
+    fUp(trial, _sbU);
+    feetR = Math.max(groundR(_sbU), footbridgeWalk?.support(_sbU, feetR) ?? -Infinity) + jumpHeight;
+    return false;
+  });
+  if (footbridgeWalk && Number.isFinite(footbridgeWalk.support(fUp(out, _sbU), feetR)))
+    ent.gr = feetR - jumpHeight;
+  return clear;
 }
 /* ?auto 时自动朝任务点打方向，用来无人值守跑一遍「取信 -> 送达」全流程 */
 const _asU = new THREE.Vector3(), _asF = new THREE.Vector3();

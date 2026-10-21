@@ -6,8 +6,7 @@ import * as THREE from 'three';
 // once into scene units:
 //   • stair towers keep their proportions and fill the sidewalk band
 //     (|x| from TOWER_IN to TOWER_OUT), the deck span is stretched to match;
-//   • every vertex is lowered by d²/2R so both towers sit flat on the curved
-//     planet sidewalk;
+//   • bridge feet conform to the curved sidewalk; the upper deck stays rigid;
 //   • glass is split into its own mesh so the opaque parts can carry an
 //     outline shell without darkening the panes behind it.
 export const FOOTBRIDGE_URL = './assets/footbridge-v1.fbx';
@@ -42,17 +41,20 @@ function bakeTemplate(source) {
     const sx = deck ? kd : kt;
     const nx = deck ? x * kd : Math.sign(x) * (TOWER_IN + (ax - SOURCE_TOWER_IN) * kt);
     const nz = (p.getZ(i) - zMid) * kt;
-    // Planet curvature: lower each point by d²/2R so the towers sit flat on the
-    // sidewalk. The span between the towers is kept rigid (same drop as the
-    // tower's inner edge): its deck beam only has vertices at the ends, so a
-    // per-vertex drop would bend the railings away from the straight deck.
-    const cx = Math.max(Math.abs(nx), TOWER_IN + .8);
-    const ny = (p.getY(i) - box.min.y) * kt - (cx * cx + nz * nz) / (2 * WALK);
+    // Keep all upper structure on one rigid plane. Only the ground-level
+    // ends conform to the planet; otherwise long deck faces and the densely
+    // segmented rails receive different sag and no longer meet.
+    const height = (p.getY(i) - box.min.y) * kt;
+    const blend = THREE.MathUtils.smoothstep(height, 0, 282 * kt);
+    const groundDrop = (nx * nx + nz * nz) / (2 * WALK);
+    const deckDrop = (TOWER_IN + .8) ** 2 / (2 * WALK);
+    const ny = height - THREE.MathUtils.lerp(groundDrop, deckDrop, blend);
     p.setXYZ(i, nx, ny, nz);
     // Inverse-transpose of the per-section scale keeps lighting correct.
     const v = new THREE.Vector3(n.getX(i) / sx, n.getY(i) / kt, n.getZ(i) / kt).normalize();
     n.setXYZ(i, v.x, v.y, v.z);
   }
+  geometry.computeVertexNormals();
   const names = [].concat(mesh.material).map(m => m.name);
   const split = glass => {
     const keep = geometry.groups.filter(g => !!PALETTE[names[g.materialIndex]]?.glass === glass);
@@ -89,6 +91,7 @@ function buildWalkGrid(geometry, names) {
   const w = Math.ceil((box.max.x + 1 - x0) / WALK_CELL), h = Math.ceil((box.max.z + 1 - z0) / WALK_CELL);
   const floor = new Float32Array(w * h).fill(-Infinity);
   const wallLo = new Float32Array(w * h).fill(Infinity), wallHi = new Float32Array(w * h).fill(-Infinity);
+  const surfaces = [], flights = new Map();
   const p = geometry.attributes.position;
   const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), q = new THREE.Vector3(), n = new THREE.Vector3();
   for (const group of geometry.groups) {
@@ -101,6 +104,16 @@ function buildWalkGrid(geometry, names) {
       if (n.lengthSq() < 1e-12) continue;
       n.normalize();
       const isFloor = walkable && n.y > .7;
+      if (isFloor) {
+        const bounds = new THREE.Box3().setFromPoints([a, b, c]);
+        const tread = /踏面/.test(names[group.materialIndex]) && bounds.max.x - bounds.min.x < 15
+          && Math.abs((bounds.min.z + bounds.max.z) / 2) > 3.5;
+        if (tread) {
+          const key = `${Math.sign(a.x)}:${Math.sign(a.z)}`;
+          if (!flights.has(key)) flights.set(key, []);
+          flights.get(key).push(bounds);
+        } else surfaces.push([a.clone(), b.clone(), c.clone()]);
+      }
       if (walkable && n.y < -.7) continue;          // undersides never block or support
       const steps = Math.max(1, Math.ceil(Math.max(a.distanceTo(b), b.distanceTo(c), c.distanceTo(a)) / (WALK_CELL * .5)));
       for (let u = 0; u <= steps; u++) for (let v = 0; u + v <= steps; v++) {
@@ -113,7 +126,41 @@ function buildWalkGrid(geometry, names) {
       }
     }
   }
-  return { x0, z0, w, h, floor, wallLo, wallHi };
+  // Replace the stair treads in the support model with an envelope through
+  // their outer nosings. The visible staircase is unchanged.
+  for (const bounds of flights.values()) {
+    const box = bounds.reduce((box, b) => box.union(b), new THREE.Box3());
+    const positive = box.min.z > 0;
+    const topZ = positive ? Math.min(...bounds.filter(b => b.max.y > box.max.y - .02).map(b => b.max.z))
+      : Math.max(...bounds.filter(b => b.max.y > box.max.y - .02).map(b => b.min.z));
+    const bottomZ = positive ? box.max.z : box.min.z;
+    const low = bounds.filter(b => (positive ? b.max.z : b.min.z) === bottomZ);
+    const bottomY = Math.max(...low.map(b => b.max.y));
+    const rect = (za, ya, zb, yb) => {
+      const a = new THREE.Vector3(box.min.x, ya, za), b = new THREE.Vector3(box.max.x, ya, za);
+      const c = new THREE.Vector3(box.max.x, yb, zb), d = new THREE.Vector3(box.min.x, yb, zb);
+      surfaces.push([a, b, c], [a, c, d]);
+    };
+    rect(bottomZ + (positive ? .8 : -.8), bottomY - .54, bottomZ, bottomY);
+    rect(bottomZ, bottomY, topZ, box.max.y);
+    rect(topZ, box.max.y, positive ? box.min.z : box.max.z, box.max.y);
+  }
+  function floorAt(x, z) {
+    let highest = -Infinity;
+    for (const [a, b, c] of surfaces) {
+      const det = (b.z-c.z)*(a.x-c.x)+(c.x-b.x)*(a.z-c.z);
+      if (Math.abs(det) < 1e-8) continue;
+      const u = ((b.z-c.z)*(x-c.x)+(c.x-b.x)*(z-c.z))/det;
+      const v = ((c.z-a.z)*(x-c.x)+(a.x-c.x)*(z-c.z))/det;
+      if (u >= -1e-6 && v >= -1e-6 && u+v <= 1.000001)
+        highest = Math.max(highest, u*a.y+v*b.y+(1-u-v)*c.y);
+    }
+    return highest;
+  }
+  for (let z=0; z<h; z++) for (let x=0; x<w; x++)
+    floor[z*w+x] = floorAt(x0+(x+.5)*WALK_CELL, z0+(z+.5)*WALK_CELL);
+  return { x0, z0, w, h, floor, wallLo, wallHi, floorAt, flights: flights.size };
+
 }
 
 // World-space queries for the walking character over all bridges.
@@ -140,7 +187,7 @@ export function createFootbridgeWalk(bridges, center) {
         if (!l) continue;
         const g = item.grid, ix = Math.floor((l.x - g.x0) / WALK_CELL), iz = Math.floor((l.z - g.z0) / WALK_CELL);
         if (ix < 0 || iz < 0 || ix >= g.w || iz >= g.h) continue;
-        const y = g.floor[iz * g.w + ix];
+        const y = g.floorAt(l.x, l.z);
         if (y === -Infinity || y > l.y + STEP) continue;
         best = Math.max(best, radiusOf(item, l.x, y, l.z));
       }
@@ -151,7 +198,10 @@ export function createFootbridgeWalk(bridges, center) {
       for (const item of items) {
         const l = toLocal(item, dir, feetR);
         if (!l) continue;
-        const g = item.grid, lo = l.y + STEP, hi = l.y + BODY;
+        const g = item.grid;
+        const supportY = g.floorAt(l.x, l.z);
+        const baseY = supportY <= l.y + STEP ? Math.max(l.y, supportY) : l.y;
+        const lo = baseY + STEP, hi = baseY + BODY;
         const ix0 = Math.max(0, Math.floor((l.x - radius - g.x0) / WALK_CELL)), ix1 = Math.min(g.w - 1, Math.floor((l.x + radius - g.x0) / WALK_CELL));
         const iz0 = Math.max(0, Math.floor((l.z - radius - g.z0) / WALK_CELL)), iz1 = Math.min(g.h - 1, Math.floor((l.z + radius - g.z0) / WALK_CELL));
         for (let iz = iz0; iz <= iz1; iz++) for (let ix = ix0; ix <= ix1; ix++) {
@@ -208,8 +258,8 @@ export function installFootbridges(city, source, lanes, { corridors, makeMateria
       mesh.castShadow = true;
       mesh.receiveShadow = !part;
       mesh.userData.footbridge = part ? 'glass' : 'body';
-      // Still a solid obstacle for the bike, traffic and spawns; the walker
-      // ignores this footprint and uses the walk grid instead.
+      // Traffic and spawns retain the static footprint. The player and bike
+      // use height-aware ramp / deck / railing queries instead.
       if (!part) { mesh.userData.walkable = true; walkers.push({ mesh, grid }); }
       root.add(mesh);
     }
