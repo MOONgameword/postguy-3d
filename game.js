@@ -11,10 +11,10 @@ import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-
 import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20261021-norock';
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
-import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20260929-15';
+import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261021-walkable';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261021-granite';
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
-import { installFootbridges, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-01';
+import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-02';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
 import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
@@ -843,9 +843,9 @@ function waterSurfaceR(dir) {
   const offset = PLANET.C.dot(dir);
   return -offset + Math.sqrt(offset * offset + LAKE_WATER * LAKE_WATER - PLANET.C.lengthSq());
 }
-function blockedDir(dir) {
+function blockedDir(dir, skipWalkable = false) {
   if (isLakeWater(_lakeWorld.copy(dir).multiplyScalar(600).add(PLANET.C))) return true;
-  return collisionWorld?.blocked(dir) || false;
+  return collisionWorld?.blocked(dir, 0, null, skipWalkable) || false;
 }
 /* 是不是车道（电动车、车流、出生点只认这个）。没烘出掩码时一律当成是。 */
 function driveDir(dir) {
@@ -1101,6 +1101,10 @@ function bakeGround(root) {
 
 /* ---------- 实体脚下轮廓碰撞 ---------- */
 let collisionWorld = null;
+/* 天桥：步行时可以上楼梯、走桥面（电动车、车流仍把楼梯塔当障碍） */
+let footbridgeWalk = null;
+/* 步行脚底所在半径（平滑后的地面 + 跳跃高度） */
+function walkerFeetR(dir) { return (foot.gr ?? groundR(dir)) + foot.h; }
 function bakeOcc(root) {
   collisionWorld = createCollisionWorld(root, PLANET.C);
   GRID.occ = collisionWorld.map(GRID.ow, GRID.oh);
@@ -1188,9 +1192,10 @@ function horizonCull(q) {
 
 /* ---------- 碰撞查询 ---------- */
 const _blU = new THREE.Vector3(), _blF = new THREE.Vector3(), _blR = new THREE.Vector3(), _blT = new THREE.Vector3();
-function blockedAt(q, r = CFG.bikeRadius, allowWater = false) {
+function blockedAt(q, r = CFG.bikeRadius, allowWater = false, walker = false) {
   fUp(q, _blU);
-  if (collisionWorld?.blocked(_blU, r)) return true;
+  if (collisionWorld?.blocked(_blU, r, null, walker)) return true;
+  if (walker && footbridgeWalk?.blocked(_blU, walkerFeetR(_blU), r)) return true;
   if (allowWater) return false;
   if (isLakeWater(_lakeWorld.copy(_blU).multiplyScalar(600).add(PLANET.C))) return true;
   fFwd(q, _blF); fRight(q, _blR);
@@ -1773,6 +1778,8 @@ function syncBody(obj, q, h, ent, k) {
   fUp(q, _sbU);
   let gr = groundR(_sbU);
   if (ent === foot && ent.swimming) gr = waterSurfaceR(_sbU) - 0.65 * S;
+  /* 天桥楼梯 / 桥面：脚下一步之内有桥面就踩上去（桥下马路上不受影响） */
+  else if (ent === foot && footbridgeWalk) gr = Math.max(gr, footbridgeWalk.support(_sbU, (ent.gr ?? gr) + h));
   if (ent) {
     if (ent.gr === undefined || Math.abs(gr - ent.gr) > 8) ent.gr = gr;
     else ent.gr += (gr - ent.gr) * k;
@@ -1782,9 +1789,10 @@ function syncBody(obj, q, h, ent, k) {
   obj.quaternion.copy(q);
 }
 
-/* 撞墙时沿墙滑行：朝斜前方试着挪一点，但朝向不变。返回是否畅通 */
+/* 撞墙时沿墙滑行：朝斜前方试着挪一点，但朝向不变。返回是否畅通。
+   allowWater 只有步行会传：步行同时按天桥的楼梯 / 桥面 / 栏杆来判断 */
 function slide(q, out, step, r, allowWater = false) {
-  return sweepSphere(q, out, step, r, PLANET.R, allowWater ? (q, r) => blockedAt(q, r, true) : blockedAt);
+  return sweepSphere(q, out, step, r, PLANET.R, allowWater ? (q, r) => blockedAt(q, r, true, true) : blockedAt);
 }
 /* ?auto 时自动朝任务点打方向，用来无人值守跑一遍「取信 -> 送达」全流程 */
 const _asU = new THREE.Vector3(), _asF = new THREE.Vector3();
@@ -1958,7 +1966,7 @@ function cameraDistance(want) {
     _cdQ.copy(camQ);
     turn(_cdQ, Math.PI);
     advance(_cdQ, d);
-    if (blockedDir(fUp(_cdQ, _cdU))) return Math.max(5.5 * S, d - 0.9 * S);
+    if (blockedDir(fUp(_cdQ, _cdU), true)) return Math.max(5.5 * S, d - 0.9 * S);
   }
   return want;
 }
@@ -2255,6 +2263,7 @@ async function boot() {
     }))
   });
   if (DEBUG) console.info('Footbridges:', footbridges);
+  footbridgeWalk = createFootbridgeWalk(footbridges.walkers, PLANET.C);
 
   const grassLevel = raiseGrassLevel(city);
   if (DEBUG) console.info('Grass level:', grassLevel);

@@ -126,7 +126,7 @@ export function createCollisionWorld(root, center = new THREE.Vector3()) {
   root.traverse(mesh => {
     if (!mesh.isMesh || !OBSTACLE.test(mesh.name) || mesh.userData.__outline) return;
     const shape = buildFootprint(mesh, center);
-    if (shape) shapes.push(shape);
+    if (shape) { shape.walkable = !!mesh.userData.walkable; shapes.push(shape); }
   });
   for (const shape of shapes) {
     // Broad phase only. The narrow phase always checks the actual footprint.
@@ -140,9 +140,11 @@ export function createCollisionWorld(root, center = new THREE.Vector3()) {
       bins.get(k).push(shape);
     }
   }
-  function query(dir, radius = 0, names = null) {
+  // skipWalkable: ignore footprints of structures the walker can climb
+  // (footbridges); their own walk query handles stairs, decks and rails.
+  function query(dir, radius = 0, names = null, skipWalkable = false) {
     const candidates = radius > 30 ? shapes : bins.get(key(Math.floor(dir.x * HASH_RADIUS / HASH_CELL), Math.floor(dir.y * HASH_RADIUS / HASH_CELL), Math.floor(dir.z * HASH_RADIUS / HASH_CELL))) || [];
-    for (const s of candidates) if (footprintBlocked(s, dir, radius)) { if (names) names.push(s.name); else return true; }
+    for (const s of candidates) if (!(skipWalkable && s.walkable) && footprintBlocked(s, dir, radius)) { if (names) names.push(s.name); else return true; }
     for (const d of discs) if (dir.dot(d.up) > Math.cos((radius + d.radius) / d.distance)) { if (names) names.push(d.name); else return true; }
     return names ? names.length > 0 : false;
   }
