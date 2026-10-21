@@ -3,8 +3,28 @@ import * as THREE from 'three';
 // One turf palette for the ground and the grass blades standing on it, so blade
 // roots are exactly the colour of the soil-level turf they grow out of.
 export const TURF_GLSL = `
-vec3 turfColor( float tone ) { return mix( vec3( .06, .22, .025 ), vec3( .24, .56, .07 ), tone ); }
+vec3 turfColor( float tone ) {
+  // deep cool green -> fresh green -> sunny yellow-green
+  return tone < .5 ? mix( vec3( .08, .27, .04 ), vec3( .15, .41, .05 ), tone * 2. )
+                   : mix( vec3( .15, .41, .05 ), vec3( .33, .59, .07 ), tone * 2. - 1. );
+}
 float turfGrainFactor( float grain ) { return .48 + 1.05 * grain; }
+// World-space meadow regions shared by the lawn and the grass blades, so a
+// patch of deep green or sunny yellow-green turf carries matching blades, and
+// tall-grass zones line up with the darker, lusher ground under them.
+float meadowHash( vec3 p ) { p = fract( p * .3183099 + .1 ); p *= 17.; return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) ); }
+float meadowNoise( vec3 x ) {
+  vec3 i = floor( x ), f = fract( x ); f = f * f * ( 3. - 2. * f );
+  return mix( mix( mix( meadowHash( i ), meadowHash( i + vec3( 1, 0, 0 ) ), f.x ),
+                   mix( meadowHash( i + vec3( 0, 1, 0 ) ), meadowHash( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+              mix( mix( meadowHash( i + vec3( 0, 0, 1 ) ), meadowHash( i + vec3( 1, 0, 1 ) ), f.x ),
+                   mix( meadowHash( i + vec3( 0, 1, 1 ) ), meadowHash( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z );
+}
+float meadowPatch( vec3 p ) { return smoothstep( .25, .75, meadowNoise( p / 26. ) * .65 + meadowNoise( p / 9. + 7.3 ) * .35 ); }
+float meadowTall( vec3 p ) { return smoothstep( .32, .68, meadowNoise( p / 15. + vec3( 19.1, 3.7, 11.4 ) ) * .7 + meadowNoise( p / 6. + 4.1 ) * .3 ); }
+float meadowTone( vec3 p, float tone ) {
+  return clamp( tone * .55 + .27 + ( meadowPatch( p ) - .5 ) * .5 - ( meadowTall( p ) - .5 ) * .1, 0., 1. );
+}
 `;
 
 // Terrain and asphalt have no directional pattern, so world-space triplanar
@@ -43,7 +63,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
         ${grass ? `float grassLight = dot(surfaceAlbedo, vec3(.2126,.7152,.0722));
         float rollingColor = .5 + .13 * sin(dot(surfacePosition, vec3(.019,.027,.013)))
           + .13 * sin(dot(surfacePosition, vec3(-.037,.011,.023)));
-        float grassTone = clamp(.30 + grassLight * 1.35 + rollingColor * .22, 0., 1.);
+        float grassTone = meadowTone(surfacePosition, clamp(.30 + grassLight * 1.35 + rollingColor * .22, 0., 1.));
         vec3 meadowColor = turfColor(grassTone);
         float slope = dot(normalize(surfaceWorldNormal), surfaceUp);
         float meadowCover = smoothstep(.50, .84, slope);
@@ -79,7 +99,7 @@ function surfaceMaterial(name, base, detail, { color, period, strength, grass = 
       outgoingLight += vec3(.035,.055,.009) * nap * meadowCover;
       #include <opaque_fragment>`);
   };
-  material.customProgramCacheKey = () => `planet-surface-v5-${grass ? 'grass' : 'stone'}`;
+  material.customProgramCacheKey = () => `planet-surface-v6-${grass ? 'grass' : 'stone'}`;
   return material;
 }
 

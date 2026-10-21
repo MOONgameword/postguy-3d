@@ -1,6 +1,5 @@
 import * as T from 'three';
 import { mergeGeometries } from './vendor/utils/BufferGeometryUtils.js';
-import {createMossRockMaterial,addMossCoordinates} from './rounded-rocks.js?v=20260929-19';
 import {installClearLake} from './lake-water.js?v=20260930-22';
 
 // The wooded basin behind Bld_0333, identified against the user's marked view.
@@ -70,8 +69,9 @@ export function createLakeside(city, { includeReeds = false } = {}){
   for(const z of[40,54,70,86,98])for(const x of[22,34]){box(x,z,599,1.25,10,1.25,materials.darkWood);box(x,z,604.3,1.65,.6,1.65,materials.lightWood);}
   // Short landward boardwalk and reeds grouped in irregular bank-side clusters.
   if(includeReeds) for(let i=0;i<32;i++){const a=random()*Math.PI*2;if(Math.abs(a-Math.PI/2)<.3)continue;const s=1.015+random()*.065,[x,z]=polar(a,s);for(let j=0;j<6;j++){const xx=x+(random()-.5)*5,zz=z+(random()-.5)*5,q=metric(xx,zz),h=2.6+random()*4;const base=bedRadius(q,602);batch(new T.CylinderGeometry(.10,.18,h,4),materials.reed,frame(xx,zz,base+h/2));const leaf=new T.BufferGeometry();leaf.setAttribute('position',new T.Float32BufferAttribute([0,0,0,1.8,h*.65,.4,.3,h*.9,0,0,0,0,-1.3,h*.55,-.5,0,h*.8,0],3));leaf.computeVertexNormals();batch(leaf,materials.reedLight,frame(xx,zz,base));if(j%3===0)batch(new T.CylinderGeometry(.3,.32,1.4,6),materials.cattail,frame(xx,zz,base+h+.35));}}
-  materials.stone=createMossRockMaterial();
-  for(let i=0;i<20;i++){const a=random()*Math.PI*2,[x,z]=polar(a,1.09+random()*.035);const g=new T.SphereGeometry(1,12,8);g.scale(1.7+random()*2,1.3+random(),1.3+random()*2);addMossCoordinates(g,'y');batch(g,materials.stone,frame(x,z,602.2));}
+  // Shore stones removed (no rocks in the scene); still draw their 5 random
+  // numbers each so the seeded layout of everything after stays identical.
+  for(let i=0;i<20*5;i++)random();
   for(const[mat,geos]of batches){const mesh=new T.Mesh(mergeGeometries(geos),mat);mesh.name=[materials.reed,materials.reedLight,materials.cattail].includes(mat)?'LakeReeds':'LakeDetail';mesh.receiveShadow=true;root.add(mesh);}
 
   const boats=[];

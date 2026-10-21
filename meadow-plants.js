@@ -1,6 +1,6 @@
 import * as T from 'three';
-import { lakeMetric } from './lakeside.js?v=20260930-22';
-import { TURF_GLSL } from './surface-materials.js?v=20261020-walk';
+import { lakeMetric } from './lakeside.js?v=20261021-norock';
+import { TURF_GLSL } from './surface-materials.js?v=20261021-soft';
 
 export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
 
@@ -60,21 +60,21 @@ export function createGrassCards(texture = null, turf = null) {
       vec3 albedo=texture2D(turfBase,sp.yz).rgb*w.x+texture2D(turfBase,sp.xz).rgb*w.y+texture2D(turfBase,sp.xy).rgb*w.z;
       float lum=dot(albedo,vec3(.2126,.7152,.0722));
       float rolling=.5+.13*sin(dot(gp,vec3(.019,.027,.013)))+.13*sin(dot(gp,vec3(-.037,.011,.023)));
-      float tone=clamp(.30+lum*1.35+rolling*.22,0.,1.);
+      float tone=meadowTone(gp,clamp(.30+lum*1.35+rolling*.22,0.,1.));
       float grain=texture2D(turfNap,sp.yz).r*w.x+texture2D(turfNap,sp.xz).r*w.y+texture2D(turfNap,sp.xy).r*w.z;
       vec3 turf=turfColor(tone);
       vec3 groundColor=turf*turfGrainFactor(grain);
       // Follows the stylized trees' bottom-to-top foliage ramp: roots are exactly
-      // the turf below, then one continuous smooth rise to a tip only a little
-      // lighter and warmer than the brightest turf (blue kept low so it stays a
-      // clean green under the blue sky fill). No plateaus, no pale yellow cap.
-      vec3 bladeTip=vec3(.30,.60,.06)*mix(.82,1.04,tone);
+      // the turf below, then one continuous smooth rise to a tip a little lighter
+      // and warmer than that turf. The tip follows the regional tone, so deep
+      // green patches keep deep green tips and sunny patches go yellow-green.
+      vec3 bladeTip=turfColor(min(1.,tone+.2))*1.05;
       float rise=smoothstep(.08,1.,grassHeight);
       diffuseColor.rgb*=mix(groundColor,bladeTip,rise*(2.-rise)*.92);
       diffuseColor.a*=smoothstep(0.,.12,grassHeight);
     `);
   };
-  material.customProgramCacheKey=()=> `grass-ground-blend-v9-${!!turf}`;
+  material.customProgramCacheKey=()=> `grass-ground-blend-v10-${!!turf}`;
   return {geometry:cards(3),farGeometry:cards(2),material};
 }
 
@@ -159,13 +159,15 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
     mat.onBeforeCompile = shader => {
       baseCompile.call(mat, shader);
       Object.assign(shader.uniforms, uniforms);
-      shader.vertexShader = 'uniform float meadowTime; uniform float meadowRange; uniform vec3 meadowFocus;\n' + shader.vertexShader;
+      shader.vertexShader = 'uniform float meadowTime; uniform float meadowRange; uniform vec3 meadowFocus;\n' + (base ? TURF_GLSL : '') + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
         vec3 transformed = vec3(position);
         vec3 root = (modelMatrix * instanceMatrix * vec4(0.,0.,0.,1.)).xyz;
         float growth = 1. - smoothstep(meadowRange - 28., meadowRange, distance(root, meadowFocus));
         transformed *= growth;
-        transformed.x += sin(meadowTime * 1.35 + root.x * .16 + root.z * .11) * .075 * position.y * growth;
+        // Regional height: short cropped lawn in some zones, tall tufts in others.
+        ${base ? 'transformed.y *= mix(.42, 1.85, meadowTall(root));' : ''}
+        transformed.x += sin(meadowTime * 1.35 + root.x * .16 + root.z * .11) * .075 * transformed.y;
       `);
       if (flower) shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `
         float size = length(instanceMatrix[0].xyz);
@@ -175,7 +177,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
         gl_Position = projectionMatrix * mvPosition;
       `);
     };
-    mat.customProgramCacheKey = () => `meadow-ground-v4-${flower}-${baseKey}`;
+    mat.customProgramCacheKey = () => `meadow-ground-v5-${flower}-${baseKey}`;
     return mat;
   }
   const grassGeometry = model.geometry;

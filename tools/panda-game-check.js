@@ -1,4 +1,4 @@
-import {lakePoint,lakePolar,lakeMetric,isLakeWater,LAKE_WATER} from '../lakeside.js?v=20260930-22';
+import {lakePoint,lakePolar,lakeMetric,isLakeWater,LAKE_WATER} from '../lakeside.js?v=20261021-norock';
 export function verifyPandaGame(c){
  const {T,foot,state,boy,walker,player,PLANET,S,keys}=c,rows=[];
  const check=(name,ok,detail='')=>{rows.push({name,pass:!!ok,detail});if(!ok)console.error('Panda check:',name,detail)};
