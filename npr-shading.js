@@ -13,7 +13,7 @@ import * as THREE from 'three';
 // litAt sits well below the flat-ground value (sun ≈23° → N·L ≈ 0.39): grass
 // cards use the radial "up" normal, so gentle hillsides must stay in the lit band
 // too or the lawn and the blades standing on it would split into two tones.
-export const NPR = { shade: 0.55, mid: 0.86, midAt: 0.0, litAt: 0.12, soft: 0.05 };
+export const NPR = { shade: 0.46, mid: 0.78, midAt: 0.0, litAt: 0.12, soft: 0.022 };
 
 const f = v => v.toFixed(4);
 const DOT_NL = 'float dotNL = saturate( dot( geometryNormal, directLight.direction ) );';

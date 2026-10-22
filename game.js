@@ -4,7 +4,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261021-lantian';
-import { installNprShading } from './npr-shading.js?v=20261020-03';
+import { installNprShading } from './npr-shading.js?v=20261022-01';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-frontage';
@@ -127,7 +127,7 @@ let lakeside = null;
 let introPreview = !DEBUG && !/(?:\?|&)(?:selftest|cartest|footest)(?:&|$)/.test(location.search);
 
 /* Bright anime-style palette: clean saturated colours, fresh greens, crisp contrast. */
-const WASH = { sat: 1.18, contrast: 1.06, coolShadow: 0.05 };
+const WASH = { sat: 1.26, contrast: 1.11, coolShadow: 0.08 };
 function pastel(m) {
   const f = v => v.toFixed(4);
   m.onBeforeCompile = shader => {
@@ -144,7 +144,7 @@ function pastel(m) {
        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.86,0.94,1.12), ${f(WASH.coolShadow)} * (1.0 - wg));
        diffuseColor.rgb = clamp(diffuseColor.rgb, 0.0, 1.0);`);
   };
-  m.customProgramCacheKey = () => 'anime-vivid-v1';
+  m.customProgramCacheKey = () => 'anime-vivid-v2';
   return m;
 }
 
