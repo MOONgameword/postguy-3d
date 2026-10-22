@@ -205,7 +205,7 @@ function toonify(root, opts = {}) {
 
 /* ---------- 描边（反向壳 / inverted hull） ---------- */
 const OUTLINE = /(?:\?|&)outline(?:&|$)/.test(location.search);
-const OBJECT_INK = !/(?:\?|&)noline(?:&|$)/.test(location.search);
+const OBJECT_INK = /(?:\?|&)line(?:&|$)/.test(location.search);
 const OUTLINE_MUL = parseFloat((location.search.match(/[?&]lw=([\d.]+)/) || [])[1]) || 1;
 const OUTLINE_COLOR = 0x2b2622;
 const outlineMats = new Map();
@@ -256,7 +256,7 @@ function bakeHullNormals(geo) {
 
 const vScale = new THREE.Vector3();
 function addOutline(root, world = 0.03, force = false) {
-  if (!OUTLINE && !force) return;
+  if (!OUTLINE) return;
   const list = [];
   root.traverse(o => { if (o.isMesh && !o.userData.__outline && !o.userData.surfaceInk) list.push(o); });
   for (const o of list) {
@@ -2371,7 +2371,7 @@ async function boot() {
   setProgress(0.85, '加载小熊猫与骨骼动作…');
   const boyRoot = await withRetry(PANDA_URL, async () => loadPanda(await fetchAsset(PANDA_URL)));
   normalize(boyRoot, { height: CFG.riderHeight });
-  addCharacterOutline(boyRoot, CFG.riderHeight * .0032);
+  if (OUTLINE) addCharacterOutline(boyRoot, CFG.riderHeight * .0032);
 
   boy.pivot = new THREE.Group();
   boy.pivot.add(boyRoot);
