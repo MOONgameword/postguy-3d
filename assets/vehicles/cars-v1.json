@@ -1,0 +1,816 @@
+{
+  "stride": 12,
+  "source": "car 合集.blend",
+  "variants": [
+    {
+      "id": 0,
+      "name": "Car_8A",
+      "sourceInstance": "gp_Car_8A_coll",
+      "parts": [
+        "Antenna",
+        "Wheel_8A_R.L",
+        "Wheel_8A_R.R",
+        "Wheel_8A_F.L",
+        "Car_8A",
+        "Wheel_8A_F.R"
+      ],
+      "size": [
+        5.69834041595459,
+        4.6536760330200195,
+        13.14291000366211
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4100,
+      "near": {
+        "start": 0,
+        "count": 12300
+      },
+      "far": {
+        "start": 0,
+        "count": 12300
+      }
+    },
+    {
+      "id": 1,
+      "name": "Car_8C",
+      "sourceInstance": "gp_gp_Car_8A_coll_coll",
+      "parts": [
+        "Wheel_8C_F.R",
+        "Car_8C",
+        "Wheel_8C_F.L",
+        "Wheel_8C_R.R",
+        "Wheel_8C_R.L"
+      ],
+      "size": [
+        5.698342323303223,
+        4.123085975646973,
+        16.279876708984375
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4186,
+      "near": {
+        "start": 12300,
+        "count": 12558
+      },
+      "far": {
+        "start": 12300,
+        "count": 12558
+      }
+    },
+    {
+      "id": 2,
+      "name": "Car_8D",
+      "sourceInstance": "gp_gp_Car_8A_coll_coll.001",
+      "parts": [
+        "Car_8D",
+        "Wheel_8D_R.L",
+        "Wheel_8D_R.R",
+        "Antenna.001",
+        "Wheel_8D_F.L",
+        "Wheel_8D_F.R"
+      ],
+      "size": [
+        5.698342323303223,
+        4.6536760330200195,
+        13.479340553283691
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4746,
+      "near": {
+        "start": 24858,
+        "count": 14238
+      },
+      "far": {
+        "start": 24858,
+        "count": 14238
+      }
+    },
+    {
+      "id": 3,
+      "name": "Car_7C",
+      "sourceInstance": "gp_Car_7C_coll",
+      "parts": [
+        "Car_7C",
+        "Wheel_7C_R.R",
+        "Wheel_7C_F.L",
+        "Wheel_7C_F.R",
+        "Wheel_7C_R.L"
+      ],
+      "size": [
+        5.927372932434082,
+        4.200871467590332,
+        11.54194450378418
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 3766,
+      "near": {
+        "start": 39096,
+        "count": 11298
+      },
+      "far": {
+        "start": 39096,
+        "count": 11298
+      }
+    },
+    {
+      "id": 4,
+      "name": "Car_9A",
+      "sourceInstance": "gp_gp_Car_8A_coll_coll.002",
+      "parts": [
+        "Car_9A",
+        "Wheel_9A_F.R",
+        "Wheel_9A_R.L",
+        "Door_9A_R.L",
+        "Wheel_9A_R.R",
+        "Door_9A_R.R",
+        "Wheel_9A_F.L"
+      ],
+      "size": [
+        6.945796966552734,
+        6.018901824951172,
+        12.249918937683105
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4688,
+      "near": {
+        "start": 50394,
+        "count": 14064
+      },
+      "far": {
+        "start": 50394,
+        "count": 14064
+      }
+    },
+    {
+      "id": 5,
+      "name": "Car_7B",
+      "sourceInstance": "gp_gp_gp_Car_8A_coll_coll.002_coll",
+      "parts": [
+        "Wheel_7B_F.L",
+        "Wheel_7B_R.R",
+        "Car_7B",
+        "Wheel_7B_F.R",
+        "Wheel_7B_R.L"
+      ],
+      "size": [
+        5.927371025085449,
+        4.200870990753174,
+        10.416935920715332
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 3343,
+      "near": {
+        "start": 64458,
+        "count": 10029
+      },
+      "far": {
+        "start": 64458,
+        "count": 10029
+      }
+    },
+    {
+      "id": 6,
+      "name": "Car_4A",
+      "sourceInstance": "gp_Car_7A_coll",
+      "parts": [
+        "Wheel_4A_F.R",
+        "Wheel_4A_M.L",
+        "Car_4A",
+        "Cylinder",
+        "Wheel_4A_M.R",
+        "Wheel_4A_F.L",
+        "Wheel_4A_R.R",
+        "Wheel_4A_R.L"
+      ],
+      "size": [
+        6.5268988609313965,
+        7.672837257385254,
+        16.5
+      ],
+      "scale": 2.166021507099426,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 6186,
+      "near": {
+        "start": 74487,
+        "count": 18558
+      },
+      "far": {
+        "start": 74487,
+        "count": 18558
+      }
+    },
+    {
+      "id": 7,
+      "name": "Car_4B",
+      "sourceInstance": "gp_gp_Car_7A_coll_coll",
+      "parts": [
+        "Wheel_4B_R.L",
+        "Wheel_4B_F.R",
+        "Wheel_4B_Addon_R.R",
+        "Car_4B_Addon",
+        "Wheel_4B_Addon_F.R",
+        "Wheel_4B_F.L",
+        "Wheel_4B_Addon_R.L",
+        "Car_4B",
+        "Wheel_4B_Addon_F.L",
+        "Wheel_4B_R.R"
+      ],
+      "size": [
+        4.8997368812561035,
+        6.607823371887207,
+        16.5
+      ],
+      "scale": 1.6260304659666633,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 6983,
+      "near": {
+        "start": 93045,
+        "count": 20949
+      },
+      "far": {
+        "start": 93045,
+        "count": 20949
+      }
+    },
+    {
+      "id": 8,
+      "name": "Car_2C",
+      "sourceInstance": "gp_gp_Car_7A_coll_coll.001",
+      "parts": [
+        "Wheel_2C_R.R",
+        "Door_2C_R.R",
+        "Car_2C",
+        "Wheel_2C_F.R",
+        "Wheel_2C_R.L",
+        "Door_2C_R.L",
+        "Wheel_2C_F.L"
+      ],
+      "size": [
+        6.212408065795898,
+        5.966799736022949,
+        12.504853248596191
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 5604,
+      "near": {
+        "start": 113994,
+        "count": 16812
+      },
+      "far": {
+        "start": 113994,
+        "count": 16812
+      }
+    },
+    {
+      "id": 9,
+      "name": "Car_23B",
+      "sourceInstance": "gp_Car_23B_coll",
+      "parts": [
+        "Wheel_23B_R.L",
+        "Wheel_23B_F.L",
+        "Car_23B_Seat.R.R",
+        "Car_23B_Steering_Wheel",
+        "Car_23B_Seat.R.L",
+        "Wheel_23B_F.R",
+        "Car_23B",
+        "Car_23B_Seat.F.R",
+        "Wheel_23B_R.R",
+        "Car_23B_Seat.F.L"
+      ],
+      "size": [
+        5.788629531860352,
+        3.71732497215271,
+        13.871973037719727
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4809,
+      "near": {
+        "start": 130806,
+        "count": 14427
+      },
+      "far": {
+        "start": 130806,
+        "count": 14427
+      }
+    },
+    {
+      "id": 10,
+      "name": "Car_3A",
+      "sourceInstance": "gp_Car_3A_coll",
+      "parts": [
+        "Car_3A",
+        "Wheel_3A_R.L",
+        "Wheel_3A_R.R",
+        "Wheel_3A_F.R",
+        "Wheel_3A_F.L"
+      ],
+      "size": [
+        5.459449768066406,
+        4.790017604827881,
+        12.717395782470703
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 5144,
+      "near": {
+        "start": 145233,
+        "count": 15432
+      },
+      "far": {
+        "start": 145233,
+        "count": 15432
+      }
+    },
+    {
+      "id": 11,
+      "name": "Car_2B",
+      "sourceInstance": "gp_Car_23B_coll.001",
+      "parts": [
+        "Wheel_2B_F.R",
+        "Door_2B_R.R",
+        "Wheel_2B_R.L",
+        "Wheel_2B_F.L",
+        "Door_2B_R.L",
+        "Car_2B",
+        "Wheel_2B_R.R"
+      ],
+      "size": [
+        6.691248893737793,
+        6.104633808135986,
+        12.504853248596191
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4868,
+      "near": {
+        "start": 160665,
+        "count": 14604
+      },
+      "far": {
+        "start": 160665,
+        "count": 14604
+      }
+    },
+    {
+      "id": 12,
+      "name": "Car_20A",
+      "sourceInstance": "gp_Car_20A_coll",
+      "parts": [
+        "Wheel_20A_R.R",
+        "Wheel_20A_F.L",
+        "Wheel_20A_R.L",
+        "Car_20A",
+        "Wheel_20A_F.R"
+      ],
+      "size": [
+        6.359852313995361,
+        3.4358103275299072,
+        11.790570259094238
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 3860,
+      "near": {
+        "start": 175269,
+        "count": 11580
+      },
+      "far": {
+        "start": 175269,
+        "count": 11580
+      }
+    },
+    {
+      "id": 13,
+      "name": "Car_15A",
+      "sourceInstance": "gp_gp_Car_20A_coll_coll",
+      "parts": [
+        "Wheel_15A_R.L",
+        "Wheel_15A_F.L",
+        "Car_15A",
+        "Wheel_15A_M.R",
+        "Wheel_15A_M.L",
+        "Wheel_15A_F.R",
+        "Wheel_15A_R.R"
+      ],
+      "size": [
+        5.201267242431641,
+        5.028197765350342,
+        16.5
+      ],
+      "scale": 1.449227503243307,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4866,
+      "near": {
+        "start": 186849,
+        "count": 14598
+      },
+      "far": {
+        "start": 186849,
+        "count": 14598
+      }
+    },
+    {
+      "id": 14,
+      "name": "Car_18A",
+      "sourceInstance": "gp_gp_gp_Car_20A_coll_coll_coll",
+      "parts": [
+        "Car_18A",
+        "Wheel_18B_F.R",
+        "Wheel_18B_R.R",
+        "Wheel_18B_R.L",
+        "Wheel_18B_F.L"
+      ],
+      "size": [
+        6.091421127319336,
+        5.3314714431762695,
+        12.619040489196777
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 2990,
+      "near": {
+        "start": 201447,
+        "count": 8970
+      },
+      "far": {
+        "start": 201447,
+        "count": 8970
+      }
+    },
+    {
+      "id": 15,
+      "name": "Car_11A",
+      "sourceInstance": "gp_Car_13B_coll",
+      "parts": [
+        "Door_11A_M1.L",
+        "Door_11A_R.L",
+        "Wheel_11A_R.L",
+        "Ladder_1",
+        "Wheel_11A_M.R",
+        "Car_11A",
+        "Wheel_11A_F.L",
+        "Siren",
+        "Door_11A_R.R",
+        "Wheel_11A_R.R",
+        "Crane_Base",
+        "Wheel_11A_M.L",
+        "Ladder_2",
+        "Wheel_11A_F.R",
+        "Door_11A_M2.L"
+      ],
+      "size": [
+        7.181553363800049,
+        7.297501087188721,
+        16.5
+      ],
+      "scale": 1.8685616771010825,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 6876,
+      "near": {
+        "start": 210417,
+        "count": 20628
+      },
+      "far": {
+        "start": 210417,
+        "count": 20628
+      }
+    },
+    {
+      "id": 16,
+      "name": "Car_10A",
+      "sourceInstance": "gp_gp_Car_13B_coll_coll",
+      "parts": [
+        "Car_10A",
+        "Wheel_10A_R.R",
+        "Wheel_10A_F.L",
+        "Tailgate_10A",
+        "Wheel_10A_R.L",
+        "Wheel_10A_F.R"
+      ],
+      "size": [
+        6.276355743408203,
+        5.578453540802002,
+        12.787236213684082
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 5676,
+      "near": {
+        "start": 231045,
+        "count": 17028
+      },
+      "far": {
+        "start": 231045,
+        "count": 17028
+      }
+    },
+    {
+      "id": 17,
+      "name": "Car_14A",
+      "sourceInstance": "gp_gp_gp_Car_13B_coll_coll_coll",
+      "parts": [
+        "Car_14A",
+        "Wheel_14A_F.R",
+        "Wheel_14A_R.L",
+        "Wheel_14A_F.L",
+        "Wheel_14A_R.R"
+      ],
+      "size": [
+        5.957678318023682,
+        3.8496158123016357,
+        13.168039321899414
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4062,
+      "near": {
+        "start": 248073,
+        "count": 12186
+      },
+      "far": {
+        "start": 248073,
+        "count": 12186
+      }
+    },
+    {
+      "id": 18,
+      "name": "Car_1A",
+      "sourceInstance": "gp_Car_1A_coll",
+      "parts": [
+        "Wheel_1A_F.R",
+        "Wheel_1A_R.L",
+        "Car_1A",
+        "Wheel_1A_R.R",
+        "Wheel_1A_F.L"
+      ],
+      "size": [
+        5.143382549285889,
+        4.153504848480225,
+        8.493097305297852
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 3446,
+      "near": {
+        "start": 260259,
+        "count": 10338
+      },
+      "far": {
+        "start": 260259,
+        "count": 10338
+      }
+    },
+    {
+      "id": 19,
+      "name": "Car_1B",
+      "sourceInstance": "gp_Car_1B_coll",
+      "parts": [
+        "Wheel_1B_F.R",
+        "Wheel_1B_R.L",
+        "Wheel_1B_R.R",
+        "Wheel_1B_F.L",
+        "Car_1B"
+      ],
+      "size": [
+        5.442498207092285,
+        4.162075042724609,
+        8.18675422668457
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4362,
+      "near": {
+        "start": 270597,
+        "count": 13086
+      },
+      "far": {
+        "start": 270597,
+        "count": 13086
+      }
+    },
+    {
+      "id": 20,
+      "name": "Car_4C",
+      "sourceInstance": "gp_Car_4C_coll",
+      "parts": [
+        "Wheel_4C_F.R",
+        "Wheel_4C_R.L",
+        "Car_4C",
+        "Wheel_4C_M.L",
+        "Wheel_4C_M.R",
+        "Wheel_4C_R.R",
+        "Door_4C_R.L",
+        "Door_4C_R.R",
+        "Wheel_4C_F.L"
+      ],
+      "size": [
+        5.858911037445068,
+        7.381715774536133,
+        16.5
+      ],
+      "scale": 1.944343127625478,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 5062,
+      "near": {
+        "start": 283683,
+        "count": 15186
+      },
+      "far": {
+        "start": 283683,
+        "count": 15186
+      }
+    },
+    {
+      "id": 21,
+      "name": "Car_18B",
+      "sourceInstance": "gp_Car_18B_coll",
+      "parts": [
+        "Wheel_18B_R.L.001",
+        "Wheel_18B_R.R.001",
+        "Wheel_18B_F.R.001",
+        "Car_18B",
+        "Wheel_18B_F.L.001"
+      ],
+      "size": [
+        6.0914177894592285,
+        5.354460716247559,
+        13.744037628173828
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 3682,
+      "near": {
+        "start": 298869,
+        "count": 11046
+      },
+      "far": {
+        "start": 298869,
+        "count": 11046
+      }
+    },
+    {
+      "id": 22,
+      "name": "Car_12B",
+      "sourceInstance": "gp_Wheel_12B_F.L_coll",
+      "parts": [
+        "Car_12B",
+        "Wheel_12B_F.L",
+        "Container_12_B",
+        "Wheel_12B_R.L",
+        "Hatch_12B",
+        "Wheel_12B_R.R",
+        "Wheel_12B_F.R"
+      ],
+      "size": [
+        7.800000190734863,
+        7.312875747680664,
+        11.618185043334961
+      ],
+      "scale": 1.7734400721614612,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 5717,
+      "near": {
+        "start": 309915,
+        "count": 17151
+      },
+      "far": {
+        "start": 309915,
+        "count": 17151
+      }
+    },
+    {
+      "id": 23,
+      "name": "Car_10B",
+      "sourceInstance": "gp_Car_10B_coll",
+      "parts": [
+        "Door_10B_R.L",
+        "Wheel_10B_F.R",
+        "Car_10B",
+        "Wheel_10B_F.L",
+        "Door_10B_R.R",
+        "Wheel_10B_R.L",
+        "Wheel_10B_R.R"
+      ],
+      "size": [
+        6.276356220245361,
+        6.749309539794922,
+        12.152227401733398
+      ],
+      "scale": 2.25,
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4390,
+      "near": {
+        "start": 327066,
+        "count": 13170
+      },
+      "far": {
+        "start": 327066,
+        "count": 13170
+      }
+    }
+  ]
+}

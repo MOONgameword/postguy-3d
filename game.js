@@ -6,6 +6,7 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261021-lantian';
 import { installNprShading } from './npr-shading.js?v=20261022-01';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
+import { createToonVehicleFleet } from './toon-vehicles.js?v=20261023-cars-v1';
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-frontage';
 import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20261021-norock';
@@ -311,43 +312,10 @@ function mergeParts(parts) {
   return g;
 }
 
-/* ---------- 汽车车款（城市资源包 car-city.fbx，63 款共用城市那张调色板图集） ----------
-   资源里 63 辆车一排排摆在原点旁边，长轴已经朝 +Z、车头也在 +Z 那端，
-   正好对上车流逻辑的 fFwd。这里把每辆搬回原点（XZ 居中、轮胎贴 y=0），
-   再统一乘同一个系数——「普通轿车 356 单位 = 3.9 个身位」。
-   不逐辆归一化车长：那样校车、加长车会被压成轿车大小，街上全是一个尺码。 */
-const CAR_UNIT = 3.9 * S / 356;
-const carVariants = [];
-let CAR_MAT = VC_MAT;
-function buildCars(root, atlas) {
-  /* 车的贴图就是城市那张图集（textures\Textures.png，和 assets/Textures.png 同一份文件）。
-     FBX 里写的是相对路径，FBXLoader 会去找 ./assets/textures/ 找不到，所以这里手动喂给它。 */
-  toonify(root, { palette: true, map: atlas });
-  root.updateMatrixWorld(true);
-  const ctr = new THREE.Vector3();
-  root.traverse(o => {
-    if (!o.isMesh || !o.geometry) return;
-    CAR_MAT = Array.isArray(o.material) ? o.material[0] : o.material;
-    let g = o.geometry.clone();
-    for (const k in g.attributes) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
-    g.morphAttributes = {};
-    if (!g.attributes.uv) {
-      /* 停靠车要合并成一个网格：属性表必须齐整，缺 UV 的补一份空的 */
-      g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-    }
-    g.applyMatrix4(o.matrixWorld);
-    if (g.index) g = g.toNonIndexed();   // 停靠车要合并成一个网格，索引状态必须一致
-    g.computeBoundingBox();
-    g.boundingBox.getCenter(ctr);
-    g.translate(-ctr.x, -g.boundingBox.min.y, -ctr.z);
-    /* 万一某个车款的长轴摆在 X 上，转 90° 掰回 +Z，不然它会横着在路上开 */
-    if (g.boundingBox.max.x - g.boundingBox.min.x > g.boundingBox.max.z - g.boundingBox.min.z) g.rotateY(Math.PI / 2);
-    g.scale(CAR_UNIT, CAR_UNIT, CAR_UNIT);
-    g.computeBoundingBox();
-    carVariants.push(OBJECT_INK ? bakeObjectInk(g) : g);
-  });
-}
-function carGeo() { return carVariants[(Math.random() * carVariants.length) | 0]; }
+/* ---------- User-authored Toon Vehicles collection ---------- */
+const carVariants=[];
+let CAR_MAT=VC_MAT,carFleet=null;
+function carGeo(){return carFleet.next();}
 
 /* frame -> 世界矩阵（把道具几何体烘到球面上） */
 const _fmP = new THREE.Vector3(), _fmS = new THREE.Vector3(1, 1, 1);
@@ -365,7 +333,7 @@ function placeParked(n) {
     const lane=trafficLanes.lanes[(Math.random()*trafficLanes.lanes.length)|0];
     const cursor={path:lane.id,distance:25+Math.random()*(lane.length-50),choice:0};
     trafficLanes.sample(cursor,pos,q);
-    if(pos.distanceTo(player.position)>650)continue;
+    // Park across the planet so every authored model has a safe space.
     const right=fRight(q,new THREE.Vector3()),forward=fFwd(q,new THREE.Vector3());
     pos.addScaledVector(right,lane.half+11-lane.offset).normalize();
     frameFromDir(pos,forward,q);
@@ -383,12 +351,12 @@ function placeParked(n) {
     stampOcc(q, 1.1 * S);
     i++;
   }
+  if (DEBUG) console.info("Toon parked cars:", JSON.stringify({placed:placed.length,requested:n,models:geos.map(g=>g.userData.vehicleName)}));
   if (!geos.length) return;
   const mesh = new THREE.Mesh(mergeParts(geos), CAR_MAT);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  if (OBJECT_INK) applyObjectInk(mesh, 1.05);
-  addOutline(mesh, 0.015 * S);
+  mesh.name="ToonVehicles_Parked";
   scene.add(mesh);
 }
 
@@ -421,6 +389,7 @@ function spawnCar(c,nearQ,why) {
     if(nearQ&&(distance<45||distance>310)) continue;
     if(!carBodyClear(c.q)) continue;
     if(traffic.some(o=>o!==c&&o.alive&&o.mesh.position.distanceTo(_scPos)<26)) continue;
+    c.mesh.geometry=carGeo();c.mesh.userData.vehicleName=c.mesh.geometry.userData.vehicleName;
     c.nav=nav;c.v=0;c.stuck=0;c.alive=true;c.wait=0;
     c.mesh.position.copy(_scPos);c.mesh.quaternion.copy(c.q);c.mesh.visible=true;
     return;
@@ -429,12 +398,10 @@ function spawnCar(c,nearQ,why) {
 }
 function initTraffic(n) {
   for (let i = 0; i < n; i++) {
-    // Long buses do not fit the tested two-lane turning envelope.
-    const models=carVariants.filter(g=>g.boundingBox.max.x-g.boundingBox.min.x<=8 && g.boundingBox.max.z-g.boundingBox.min.z<=17);
-    const mesh = new THREE.Mesh(models[(Math.random()*models.length)|0], CAR_MAT);
-    mesh.castShadow = true;
-    if (OBJECT_INK) applyObjectInk(mesh, 1.05);
-    addOutline(mesh, 0.015 * S);
+    // Every source variant fits the same tested two-lane envelope.
+    const mesh = new THREE.Mesh(carVariants[0], CAR_MAT);
+    mesh.name='ToonVehicle_Traffic_'+i;
+    mesh.castShadow = true;mesh.receiveShadow=true;
     scene.add(mesh);
     const c = { id:i, mesh, q: new THREE.Quaternion(), v: 0, stuck: 0, alive: false };
     traffic.push(c);
@@ -2380,8 +2347,12 @@ async function boot() {
   addOutline(bikeHolder, 0.021 * S);
 
   setProgress(0.78, '加载汽车…');
-  const carRoot = await loadOne('./assets/car-city.fbx', f => setProgress(0.78 + f * 0.06));
-  buildCars(carRoot, atlas);
+  const [carBytes,carManifest,carAtlas]=await Promise.all([
+    fetchAsset('./assets/vehicles/cars-v1.bin'),fetchAsset('./assets/vehicles/cars-v1.json'),loadTex('./assets/vehicles/cars-atlas-v1.png')
+  ]);
+  carFleet=createToonVehicleFleet(carBytes,JSON.parse(new TextDecoder().decode(carManifest)),carAtlas);
+  carVariants.push(...carFleet.geometries);CAR_MAT=carFleet.material;
+  if(DEBUG)console.info('Toon vehicle fleet:',JSON.stringify({variants:carVariants.length,names:carVariants.map(g=>g.userData.vehicleName)}));
 
   setProgress(0.85, '加载小熊猫与骨骼动作…');
   const boyRoot = await withRetry(PANDA_URL, async () => loadPanda(await fetchAsset(PANDA_URL)));
@@ -2464,11 +2435,12 @@ async function boot() {
   if(state.mailboxes.length<9)throw new Error('没有找到足够的安全路边邮箱位置');
 
   setProgress(0.96, '布置车流与街景…');
-  placeParked(IS_MOBILE ? 9 : 14);
+  placeParked(carVariants.length-(IS_MOBILE?4:6));
 
   await new Promise(r => setTimeout(r, 16));
 
   initTraffic(IS_MOBILE ? 4 : 6);
+  if(DEBUG)console.info('Toon traffic models:',JSON.stringify(traffic.map(c=>({name:c.mesh.userData.vehicleName,alive:c.alive}))));
   if (/(\?|&)foot/.test(location.search)) dismount();
   if (DEBUG && new URLSearchParams(location.search).has('pandatest')) {
     const { verifyPandaGame } = await import('./tools/panda-game-check.js');
