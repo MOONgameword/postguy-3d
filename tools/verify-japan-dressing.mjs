@@ -17,8 +17,29 @@ import { replaceStylizedTrees } from '../stylized-trees.js';
 import { loadTestTrunk } from './load-test-trunk.mjs';
 import { installJapanDressing } from '../japan-dressing.js';
 import {loadTestJapan} from './install-test-japan.mjs';
+import {poleSockets} from './japan-pole-sockets.mjs';
 
 const read=n=>JSON.parse(fs.readFileSync('assets/'+n));
+const layout=read('japan/dressing-layout-v2.json');
+assert.ok(!layout.placements.some(p=>/^SM_(sign|board_|sticker_|warning_panel|cloth_storefront|cable_line|cable_single)/.test(p.asset)));
+const props=new Map(loadTestJapan('props').map(v=>[v.name,v]));
+for(const pole of layout.poleConnections){
+ const p=layout.placements[pole.placement],q=new T.Quaternion(...p.quaternion),sockets=poleSockets(props.get(p.asset));
+ const axis=new T.Vector3(...(pole.axis==='x'?[1,0,0]:[0,0,1])).applyQuaternion(q);
+ assert.ok(axis.dot(new T.Vector3(...pole.roadward))>.99999,'Crossarm runs across road');
+ const actual=sockets.terminals.map(v=>new T.Vector3(...v).multiply(new T.Vector3(...p.scale)).applyQuaternion(q).add(new T.Vector3(...p.position)));
+ for(const terminal of pole.terminals)assert.ok(actual.some(v=>v.distanceTo(new T.Vector3(...terminal))<1e-6),'Endpoint lies on authored insulator');
+ assert.equal(layout.wires.filter(w=>w.kind==='jumper'&&w.pole===pole.placement).length,pole.transformers.length);
+}
+for(const wire of layout.wires){
+ const refs=wire.kind==='span'?wire.poles:[wire.pole,wire.pole];
+ for(const [j,end] of ['start','end'].entries()){
+  const p=layout.poleConnections.find(p=>p.placement===refs[j]);
+  const targets=wire.kind==='jumper'&&j===1?p.transformers:p.terminals;
+  assert.ok(targets.some(v=>new T.Vector3(...v).distanceTo(new T.Vector3(...wire[end]))<1e-6),'Cable endpoint attaches to fitting');
+ }
+}
+console.log({connectedPoles:layout.poleConnections.length,cables:layout.wires.length});
 const {city,road,center}=loadCity(),plan=buildRoundedJunctions(road),query=createRoadQuery(plan);
 const bytes=fs.readFileSync('assets/roads-rounded-v16.bin');
 installRoadGeometry(city,decodeRoadGeometry(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)));
@@ -38,7 +59,7 @@ assert.equal(japanBuildings,276);assert.equal(japanTrees,treeStats.replaced);
 console.log({japanBuildings,japanTrees,treeVariants:treeStats.variants});
 const oldRocks=[];city.traverse(o=>{if(/^Rock_/.test(o.name))oldRocks.push(o)});oldRocks.forEach(o=>o.removeFromParent());
 const snapshot=placements.map(p=>city.getObjectByName(p.name).matrixWorld.toArray());
-const dressing=installJapanDressing(city,loadTestJapan('props'),{material:new T.MeshLambertMaterial()},read('japan/dressing-layout-v1.json'));
+const dressing=installJapanDressing(city,loadTestJapan('props'),{material:new T.MeshLambertMaterial()},read('japan/dressing-layout-v2.json'));
 assert.deepEqual(placements.map(p=>city.getObjectByName(p.name).matrixWorld.toArray()),snapshot,'Building transforms remain unchanged');
 console.log(dressing.stats);
 const world=createCollisionWorld(city,center),lanes=createTrafficLanes(read('traffic-lanes-v1.json'),center);

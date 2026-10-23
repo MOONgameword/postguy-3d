@@ -1,5 +1,6 @@
 // Additive art pass. Never writes the building, road or terrain assets.
 import fs from 'node:fs';
+import {poleSockets} from './japan-pole-sockets.mjs';
 import * as T from '../vendor/three.module.js';
 import {loadCity} from './load-city.mjs';
 import {installTestTerrain} from './install-test-terrain.mjs';
@@ -25,6 +26,7 @@ const list=prefix=>variants.map(v=>v.name).filter(n=>n.startsWith('SM_'+prefix))
 const cycle=(names,i)=>names[((i%names.length)+names.length)%names.length];
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Y=V(0,1,0),Z=V(0,0,1);
 const ray=new T.Raycaster(),terrain=city.getObjectByName('Planet');terrain.material=new T.MeshBasicMaterial({side:T.DoubleSide});
+const wires=[],poleConnections=[];
 const records=[],occupied=[],used=new Map(),counts={},rejects={};
 const fail=why=>{rejects[why]=(rejects[why]||0)+1;return null;};
 const WALK=602+2.6/3;
@@ -35,10 +37,18 @@ function groundRadius(p){
 }
 function frame(p,forward){const up=p.clone().normalize(),z=forward.clone().projectOnPlane(up).normalize(),x=V().crossVectors(up,z).normalize();return new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x,up,z));}
 function add(name,position,quaternion,scale,category,{ground=false,solid=false,detail=false,allowBuilding=false,allowRoad=false,anchor=null,overlap=false}={}){
+ // Shop advertising, freestanding boards and street sign panels are removed.
+ if(/^SM_(sign|board_|sticker_|warning_panel|cloth_storefront)/.test(name))return null;
  const v=byName.get(name);if(!v)throw Error('Missing '+name);
  scale=typeof scale==='number'?[scale,scale,scale]:scale;
  const p=position.clone();if(ground)p.setLength(groundRadius(p)+.025);
- const m=new T.Matrix4().compose(p,quaternion,V(...scale)),box=v.near.boundingBox;
+ const m=new T.Matrix4().compose(p,quaternion,V(...scale));
+ let box=v.near.boundingBox;
+ if(name.startsWith('SM_utility_pole')){
+  // Crossarms overhang the curb overhead; only the actual foot occupies paving.
+  box=new T.Box3();const vertices=v.near.attributes.position;
+  for(let i=0;i<vertices.count;i++)if(vertices.getY(i)<v.size[1]*.1)box.expandByPoint(V().fromBufferAttribute(vertices,i));
+ }
  if(ground){
   const corners=[];for(const x of [box.min.x,box.max.x])for(const z of [box.min.z,box.max.z])corners.push(V(x,0,z).applyMatrix4(m));
   if(!allowRoad&&corners.some(q=>onRoad(q)))return fail('road');
@@ -160,28 +170,40 @@ for(let i=0;i<buildings.length;i++){
  }
 }
 
-// Pole pairs and their wires follow each spherical street. Wires never become
-// ground obstacles, and cannot droop through the road at the planet's horizon.
+// Crossarms run across the road; conductors run along it. Each endpoint is
+// an actual transformed insulator socket, including the planet curvature.
+const sockets=new Map(list('utility_pole').map(name=>[name,poleSockets(byName.get(name))]));
 for(const [ci,c] of plan.corridors.entries())for(const sign of [-1,1]){
  const poles=[];let k=0;
  for(let s=c.start+22/600;s<c.end-22/600;s+=70/600,k++){
   if([0,7,13,14].includes(ci)&&Math.abs(s-(c.start+c.end)/2)*600<35)continue;
-  const p=c.at(s,sign*(c.arm.half+2.5),WALK),up=p.clone().normalize(),forward=c.at(s,0,WALK).sub(p).projectOnPlane(up).normalize();
-  const q=frame(p,forward),name=cycle(list('utility_pole'),ci+k),v=byName.get(name),factor=21/v.size[1];
+  const p=c.at(s,sign*(c.arm.half+2.5),WALK),up=p.clone().normalize();
+  const roadward=c.at(s,0,WALK).sub(p).projectOnPlane(up).normalize();
+  const name=cycle(list('utility_pole'),ci+k),v=byName.get(name),socket=sockets.get(name),factor=21/v.size[1];
+  const q=frame(p,socket.axis==='x'?V().crossVectors(roadward,up):roadward);
   const pole=add(name,p,q,factor,'power',{ground:true,solid:true});
   if(!pole)continue;
-  const base=V(...pole.position);poles.push({p:base,q,top:base.clone().addScaledVector(up,19)});
-  if(k%2===0)add(cycle(list('warning_panel'),ci+k),base.clone().addScaledVector(up,3).addScaledVector(forward,.4),q,2.2,'power',{detail:true});
-  if(k%3===0)add(cycle(list('sign_streetname'),ci+Math.floor(k/3)),c.at(s+9/600,sign*(c.arm.half+2.5),WALK),q,2.3,'wayfinding',{ground:true,solid:true});
-  if(k%2===1)add(cycle(list('sign_traffic_'),ci*7+k),c.at(s-9/600,sign*(c.arm.half+2.5),WALK),q,2.1,'wayfinding',{ground:true,solid:true});
-  if(k%4===0)add(cycle(['SM_mirror_round_02','SM_mirror_round_03'],ci+k),c.at(s+15/600,sign*(c.arm.half+2.5),WALK),q,2,'wayfinding',{ground:true,solid:true});
+  const index=records.length-1,base=V(...pole.position),world=local=>V(...local).multiplyScalar(factor).applyQuaternion(q).add(base);
+  const terminals=socket.terminals.map(world).sort((a,b)=>a.dot(c.side)-b.dot(c.side));
+  const transformers=socket.transformers.map(world);
+  poleConnections.push({placement:index,axis:socket.axis,roadward:roadward.toArray(),terminals:terminals.map(v=>v.toArray()),transformers:transformers.map(v=>v.toArray())});
+  poles.push({index,base,terminals});
+  // Short slack leads connect the distribution conductors to pole equipment.
+  for(let j=0;j<transformers.length;j++){
+   const a=terminals[j%4],b=transformers[j];
+   const mid=a.clone().lerp(b,.5).addScaledVector(roadward,.55);
+   wires.push({group:ci+'_'+sign,kind:'jumper',pole:index,start:a.toArray(),end:b.toArray(),control:mid.toArray()});
+  }
+  if(k%4===0)add(cycle(['SM_mirror_round_02','SM_mirror_round_03'],ci+k),c.at(s+15/600,sign*(c.arm.half+2.5),WALK),frame(p,roadward),2,'wayfinding',{ground:true,solid:true});
  }
  for(let k=1;k<poles.length;k++){
-  const a=poles[k-1],b=poles[k],delta=b.top.clone().sub(a.top);if(delta.length()>100)continue;
-  const middle=a.top.clone().add(b.top).multiplyScalar(.5),name=cycle(['SM_cable_line_01','SM_cable_line_02','SM_cable_line_03','SM_cable_single'],ci+k),v=byName.get(name);
-  const q=frame(middle,delta),scale=[2,1,delta.length()/v.size[2]];
-  // Cable templates have their low point at y=0 and their ends raised.
-  add(name,middle.clone().addScaledVector(middle.clone().normalize(),-v.size[1]),q,scale,'power',{detail:false});
+  const a=poles[k-1],b=poles[k];if(a.base.distanceTo(b.base)>100)continue;
+  for(let j=0;j<4;j++){
+   const start=a.terminals[j],end=b.terminals[j],mid=start.clone().lerp(end,.5);
+   // A quadratic sag leaves both authored socket positions exact.
+   const control=mid.clone().addScaledVector(mid.clone().normalize(),-2.4);
+   wires.push({group:ci+'_'+sign,kind:'span',poles:[a.index,b.index],start:start.toArray(),end:end.toArray(),control:control.toArray()});
+  }
  }
 }
 
@@ -221,9 +243,9 @@ for(let i=0;i<buildings.length;i+=4){
 
 // Report used and omitted source variants explicitly; don't force structural
 // road modules or railway crossings into an unchanged street network.
-const report={placements:records.length,assetTypes:used.size,available:variants.length,categories:counts,rejected:rejects,
+const report={wires:wires.length,poles:poleConnections.length,placements:records.length,assetTypes:used.size,available:variants.length,categories:counts,rejected:rejects,
  used:[...used].sort((a,b)=>a[0].localeCompare(b[0])).map(([name,count])=>({name,count})),
  unused:variants.filter(v=>!used.has(v.name)).map(v=>v.name)};
-fs.writeFileSync('assets/japan/dressing-layout-v1.json',JSON.stringify({version:1,placements:records}));
-fs.writeFileSync('assets/japan/dressing-report-v1.json',JSON.stringify(report,null,2));
+fs.writeFileSync('assets/japan/dressing-layout-v2.json',JSON.stringify({version:2,placements:records,wires,poleConnections}));
+fs.writeFileSync('assets/japan/dressing-report-v2.json',JSON.stringify(report,null,2));
 console.log(JSON.stringify({...report,used:undefined},null,2));

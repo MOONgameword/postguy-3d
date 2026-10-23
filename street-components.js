@@ -152,29 +152,15 @@ export function installStreetComponents(city, source, {
   // multiply the lamp instance scale by 1.5.
   for (const frame of anchors) add('04', frame, 0, .98 * 1.5, true);
 
-  // Put one pedestrian signal on each sidewalk side of every reported
-  // crosswalk.  These placements are generated from the same road plan as
-  // the baked stripes, so they do not drift when the road is rebuilt.
-  for (const placement of crosswalkSignals) {
-    const up = new THREE.Vector3().fromArray(placement.position).normalize();
-    const roadward = new THREE.Vector3().fromArray(placement.roadward)
-      .addScaledVector(up, -new THREE.Vector3().fromArray(placement.roadward).dot(up)).normalize();
-    const tangent = new THREE.Vector3().fromArray(placement.tangent || placement.roadward)
-      .addScaledVector(up, -new THREE.Vector3().fromArray(placement.tangent || placement.roadward).dot(up)).normalize();
-    const frame = { up, tangent, roadward, base: up.clone().multiplyScalar(radius) };
-    add('03', frame, 0, 1, 'front');
-    // The horizontal traffic signal sits a short distance along the frontage
-    // so it reads as a separate pole at the same crosswalk edge. Keep one on
-    // the left-hand sidewalk side of each crossing, as in the reference.
-    if (placement.side === -1) add('02', frame, 2.5, 1, 'front');
-  }
+  // Crosswalks stay painted, but no pedestrian or horizontal signals are installed.
 
   // Small deterministic counts keep the authored street kit visible without
   // recreating the old dense sidewalk clutter. Wider barriers/planters get a
   // tangent offset so their footprint stays inside the paving band.
-  const counts = { '01': 4, '05': 4, '06': 4, '07': 4,
+  const counts = { '05': 4, '06': 4, '07': 4,
     '08': 4, '09': 8, '10': 4, '11': 4, '12': 4, '13': 8, '14': 10 };
-  let seed = 7;
+  // Preserve every other kit placement after retiring the four old utility poles.
+  let seed = 18;
   for (const id of Object.keys(counts)) {
     for (const index of spreadIndices(anchors.length, counts[id], seed)) {
       const frame = anchors[index];
@@ -185,6 +171,6 @@ export function installStreetComponents(city, source, {
     seed += 11;
   }
   source.visible = false;
-  root.userData.streetComponentStats = { lampAnchors: anchors.length, placed: placed.length, componentTypes: 14 };
+  root.userData.streetComponentStats = { lampAnchors: anchors.length, placed: placed.length, componentTypes: 11 };
   return root.userData.streetComponentStats;
 }

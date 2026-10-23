@@ -1,0 +1,666 @@
+{
+  "wires": 1238,
+  "poles": 188,
+  "placements": 2314,
+  "assetTypes": 134,
+  "available": 234,
+  "categories": {
+    "apartments": 307,
+    "gardens": 313,
+    "shops": 568,
+    "residential": 289,
+    "ramen": 375,
+    "terraces": 108,
+    "power": 188,
+    "wayfinding": 62,
+    "service-pockets": 35,
+    "rooftops": 69
+  },
+  "rejected": {
+    "prop-spacing": 99,
+    "no-wall": 54,
+    "walk-clearance": 74,
+    "existing-solid": 40,
+    "bridge": 2
+  },
+  "used": [
+    {
+      "name": "SM_airconditioner_01",
+      "count": 55
+    },
+    {
+      "name": "SM_airconditioner_02",
+      "count": 41
+    },
+    {
+      "name": "SM_antenna_01",
+      "count": 35
+    },
+    {
+      "name": "SM_antenna_02",
+      "count": 34
+    },
+    {
+      "name": "SM_bicycle",
+      "count": 26
+    },
+    {
+      "name": "SM_bikestand",
+      "count": 1
+    },
+    {
+      "name": "SM_book_shelf_01",
+      "count": 12
+    },
+    {
+      "name": "SM_book_shelf_02",
+      "count": 8
+    },
+    {
+      "name": "SM_bottle_drink_01",
+      "count": 14
+    },
+    {
+      "name": "SM_bottle_drink_02",
+      "count": 14
+    },
+    {
+      "name": "SM_bottle_drink_03",
+      "count": 14
+    },
+    {
+      "name": "SM_bottle_drink_04",
+      "count": 14
+    },
+    {
+      "name": "SM_broom_stick",
+      "count": 12
+    },
+    {
+      "name": "SM_bucket",
+      "count": 11
+    },
+    {
+      "name": "SM_bush_01",
+      "count": 1
+    },
+    {
+      "name": "SM_cables_hanging_01",
+      "count": 23
+    },
+    {
+      "name": "SM_cables_hanging_02",
+      "count": 23
+    },
+    {
+      "name": "SM_cables_hanging_03",
+      "count": 23
+    },
+    {
+      "name": "SM_carton_01",
+      "count": 11
+    },
+    {
+      "name": "SM_carton_02",
+      "count": 11
+    },
+    {
+      "name": "SM_carton_03",
+      "count": 7
+    },
+    {
+      "name": "SM_chair",
+      "count": 15
+    },
+    {
+      "name": "SM_chair_02",
+      "count": 43
+    },
+    {
+      "name": "SM_chopsticks",
+      "count": 14
+    },
+    {
+      "name": "SM_cornerwall",
+      "count": 1
+    },
+    {
+      "name": "SM_counter_shop",
+      "count": 14
+    },
+    {
+      "name": "SM_drain_street",
+      "count": 1
+    },
+    {
+      "name": "SM_entrance_edge",
+      "count": 19
+    },
+    {
+      "name": "SM_entrance_fence",
+      "count": 17
+    },
+    {
+      "name": "SM_entrance_fence_02",
+      "count": 19
+    },
+    {
+      "name": "SM_entrance_fence_03",
+      "count": 17
+    },
+    {
+      "name": "SM_fence_01",
+      "count": 22
+    },
+    {
+      "name": "SM_fence_02",
+      "count": 24
+    },
+    {
+      "name": "SM_fence_03",
+      "count": 24
+    },
+    {
+      "name": "SM_fence_04",
+      "count": 22
+    },
+    {
+      "name": "SM_fence_05",
+      "count": 24
+    },
+    {
+      "name": "SM_fence_06",
+      "count": 22
+    },
+    {
+      "name": "SM_fence_07",
+      "count": 22
+    },
+    {
+      "name": "SM_firehydrant",
+      "count": 1
+    },
+    {
+      "name": "SM_flowerpot_01",
+      "count": 19
+    },
+    {
+      "name": "SM_flowerpot_010",
+      "count": 14
+    },
+    {
+      "name": "SM_flowerpot_02",
+      "count": 20
+    },
+    {
+      "name": "SM_flowerpot_03",
+      "count": 15
+    },
+    {
+      "name": "SM_flowerpot_04",
+      "count": 20
+    },
+    {
+      "name": "SM_flowerpot_05",
+      "count": 16
+    },
+    {
+      "name": "SM_flowerpot_06",
+      "count": 20
+    },
+    {
+      "name": "SM_flowerpot_07",
+      "count": 16
+    },
+    {
+      "name": "SM_flowerpot_08",
+      "count": 19
+    },
+    {
+      "name": "SM_flowerpot_09",
+      "count": 16
+    },
+    {
+      "name": "SM_flowerpot_10",
+      "count": 18
+    },
+    {
+      "name": "SM_fusebox_large",
+      "count": 1
+    },
+    {
+      "name": "SM_fusebox_wall_01",
+      "count": 12
+    },
+    {
+      "name": "SM_fusebox_wall_02",
+      "count": 10
+    },
+    {
+      "name": "SM_fusebox_wall_03",
+      "count": 9
+    },
+    {
+      "name": "SM_fusebox_wall_04",
+      "count": 9
+    },
+    {
+      "name": "SM_fusebox_wall_07",
+      "count": 9
+    },
+    {
+      "name": "SM_fusebox_wall_08",
+      "count": 11
+    },
+    {
+      "name": "SM_fusebox_wall_09",
+      "count": 13
+    },
+    {
+      "name": "SM_grass_patch_large",
+      "count": 41
+    },
+    {
+      "name": "SM_grass_patch_small",
+      "count": 17
+    },
+    {
+      "name": "SM_knife_01",
+      "count": 14
+    },
+    {
+      "name": "SM_knife_02",
+      "count": 14
+    },
+    {
+      "name": "SM_lamp_01",
+      "count": 73
+    },
+    {
+      "name": "SM_lamp_02",
+      "count": 73
+    },
+    {
+      "name": "SM_lamp_03",
+      "count": 58
+    },
+    {
+      "name": "SM_lamp_04",
+      "count": 72
+    },
+    {
+      "name": "SM_lantern_traditional_01",
+      "count": 4
+    },
+    {
+      "name": "SM_lantern_traditional_02",
+      "count": 4
+    },
+    {
+      "name": "SM_lantern_traditional_03",
+      "count": 3
+    },
+    {
+      "name": "SM_lantern_traditional_04",
+      "count": 3
+    },
+    {
+      "name": "SM_leaves_ground",
+      "count": 17
+    },
+    {
+      "name": "SM_mailbox_post",
+      "count": 1
+    },
+    {
+      "name": "SM_mailbox_resident_01",
+      "count": 28
+    },
+    {
+      "name": "SM_mailbox_resident_02",
+      "count": 28
+    },
+    {
+      "name": "SM_manhole",
+      "count": 1
+    },
+    {
+      "name": "SM_mirror_round_02",
+      "count": 34
+    },
+    {
+      "name": "SM_mirror_round_03",
+      "count": 28
+    },
+    {
+      "name": "SM_mofa_vehicle",
+      "count": 9
+    },
+    {
+      "name": "SM_plants_box_01",
+      "count": 16
+    },
+    {
+      "name": "SM_plants_box_02",
+      "count": 18
+    },
+    {
+      "name": "SM_plants_box_03",
+      "count": 14
+    },
+    {
+      "name": "SM_plate_wooden_01",
+      "count": 14
+    },
+    {
+      "name": "SM_pole_street",
+      "count": 1
+    },
+    {
+      "name": "SM_pot01",
+      "count": 14
+    },
+    {
+      "name": "SM_pot02",
+      "count": 14
+    },
+    {
+      "name": "SM_ramenbowl",
+      "count": 14
+    },
+    {
+      "name": "SM_rice_curry_dish",
+      "count": 14
+    },
+    {
+      "name": "SM_shelf_wooden",
+      "count": 7
+    },
+    {
+      "name": "SM_shelves_store",
+      "count": 14
+    },
+    {
+      "name": "SM_soup",
+      "count": 14
+    },
+    {
+      "name": "SM_soysauce",
+      "count": 14
+    },
+    {
+      "name": "SM_stool_01",
+      "count": 28
+    },
+    {
+      "name": "SM_stool_02",
+      "count": 14
+    },
+    {
+      "name": "SM_sunscreen_shop_01",
+      "count": 18
+    },
+    {
+      "name": "SM_sunscreen_shop_02",
+      "count": 28
+    },
+    {
+      "name": "SM_sunscreen_shop_03",
+      "count": 18
+    },
+    {
+      "name": "SM_sunscreen_shop_04",
+      "count": 26
+    },
+    {
+      "name": "SM_sunscreen_shop_05",
+      "count": 18
+    },
+    {
+      "name": "SM_sunscreen_shop_06",
+      "count": 28
+    },
+    {
+      "name": "SM_sunscreen_window_01",
+      "count": 19
+    },
+    {
+      "name": "SM_sunscreen_window_02",
+      "count": 19
+    },
+    {
+      "name": "SM_sunscreen_window_03",
+      "count": 18
+    },
+    {
+      "name": "SM_sushi_plate",
+      "count": 14
+    },
+    {
+      "name": "SM_table_01",
+      "count": 17
+    },
+    {
+      "name": "SM_table_shop",
+      "count": 21
+    },
+    {
+      "name": "SM_traffic_pylon",
+      "count": 1
+    },
+    {
+      "name": "SM_trash_can_01",
+      "count": 15
+    },
+    {
+      "name": "SM_trash_can_02",
+      "count": 14
+    },
+    {
+      "name": "SM_trash_container_01",
+      "count": 1
+    },
+    {
+      "name": "SM_trash_container_02",
+      "count": 15
+    },
+    {
+      "name": "SM_trash_recycling",
+      "count": 14
+    },
+    {
+      "name": "SM_trowel_01",
+      "count": 14
+    },
+    {
+      "name": "SM_utility_pole_01",
+      "count": 34
+    },
+    {
+      "name": "SM_utility_pole_02",
+      "count": 38
+    },
+    {
+      "name": "SM_utility_pole_03",
+      "count": 38
+    },
+    {
+      "name": "SM_utility_pole_04",
+      "count": 40
+    },
+    {
+      "name": "SM_utility_pole_05",
+      "count": 38
+    },
+    {
+      "name": "SM_vendingmachine_01",
+      "count": 11
+    },
+    {
+      "name": "SM_vendingmachine_02",
+      "count": 10
+    },
+    {
+      "name": "SM_vendingmachine_bottles_01",
+      "count": 11
+    },
+    {
+      "name": "SM_vendingmachine_bottles_02",
+      "count": 9
+    },
+    {
+      "name": "SM_vendingmachine_bottles_03",
+      "count": 7
+    },
+    {
+      "name": "SM_vendingmachine_bottles_04",
+      "count": 5
+    },
+    {
+      "name": "SM_ventilation_01",
+      "count": 11
+    },
+    {
+      "name": "SM_ventilation_02",
+      "count": 9
+    },
+    {
+      "name": "SM_ventilation_03",
+      "count": 12
+    },
+    {
+      "name": "SM_wall_01",
+      "count": 1
+    },
+    {
+      "name": "SM_wall_corner",
+      "count": 1
+    },
+    {
+      "name": "SM_wall_fence",
+      "count": 1
+    },
+    {
+      "name": "SM_wall_flowerbed",
+      "count": 1
+    },
+    {
+      "name": "SM_wall_pillar",
+      "count": 6
+    },
+    {
+      "name": "SM_walls_poarch_02",
+      "count": 1
+    },
+    {
+      "name": "SM_walls_poarch_03",
+      "count": 1
+    },
+    {
+      "name": "SM_walls_poarch_05",
+      "count": 1
+    }
+  ],
+  "unused": [
+    "SM_blockade_train_01",
+    "SM_blockade_train_02",
+    "SM_blockade_train_03",
+    "SM_board_digital_01",
+    "SM_board_digital_02",
+    "SM_board_digital_03",
+    "SM_board_foldable_01",
+    "SM_board_foldable_02",
+    "SM_board_foldable_03",
+    "SM_cable_line_01",
+    "SM_cable_line_02",
+    "SM_cable_line_03",
+    "SM_cable_single",
+    "SM_cables_trainlines",
+    "SM_cloth_storefront_01",
+    "SM_cloth_storefront_02",
+    "SM_cloth_storefront_03",
+    "SM_gate_train",
+    "SM_gatelift",
+    "SM_mirror_round_01",
+    "SM_platform_01",
+    "SM_powerline_train",
+    "SM_railway_train",
+    "SM_sign_3d_chinesefood",
+    "SM_sign_3d_flowerstore",
+    "SM_sign_3d_karaoke",
+    "SM_sign_3d_konbini",
+    "SM_sign_3d_library",
+    "SM_sign_3d_manga",
+    "SM_sign_3d_postoffice",
+    "SM_sign_streetname_01",
+    "SM_sign_streetname_02",
+    "SM_sign_streetname_03",
+    "SM_sign_traffic_001",
+    "SM_sign_traffic_002",
+    "SM_sign_traffic_003",
+    "SM_sign_traffic_004",
+    "SM_sign_traffic_005",
+    "SM_sign_traffic_006",
+    "SM_sign_traffic_007",
+    "SM_sign_traffic_008",
+    "SM_sign_traffic_009",
+    "SM_sign_traffic_010",
+    "SM_sign_traffic_011",
+    "SM_sign_traffic_012",
+    "SM_sign_traffic_013",
+    "SM_sign_traffic_014",
+    "SM_sign_traffic_015",
+    "SM_sign_traffic_016",
+    "SM_sign_traffic_017",
+    "SM_sign_train_01",
+    "SM_sign_train_02",
+    "SM_sign_train_03",
+    "SM_signboard_small_01",
+    "SM_signboard_small_02",
+    "SM_signboard_small_04",
+    "SM_signboard_small_05",
+    "SM_signboard_small_06",
+    "SM_signboard_small_09",
+    "SM_signboard_vertical_01",
+    "SM_signboard_vertical_02",
+    "SM_signboard_vertical_03",
+    "SM_signboard_vertical_04",
+    "SM_signboard_vertical_05",
+    "SM_signboard_vertical_06",
+    "SM_signboard_wide_01",
+    "SM_signboard_wide_02",
+    "SM_signboard_wide_03",
+    "SM_signboard_wide_04",
+    "SM_signboard_wide_05",
+    "SM_stairs_01",
+    "SM_stairs_wide",
+    "SM_sticker_atm",
+    "SM_sticker_open",
+    "SM_sticker_store_01",
+    "SM_sticker_store_02",
+    "SM_sticker_store_03",
+    "SM_sticker_store_04",
+    "SM_sticker_store_05",
+    "SM_sticker_store_ads",
+    "SM_sticker_store_ads_02",
+    "SM_sticker_tobacco",
+    "SM_trafficlight_cars",
+    "SM_trafficlight_cars_0",
+    "SM_trafficlight_pedestrian_01",
+    "SM_trafficlight_pedestrian_02",
+    "SM_trafficlight_pole",
+    "SM_train_japan_01",
+    "SM_train_japan_01_windows",
+    "SM_traincrossing_cross",
+    "SM_walls_poarch_01",
+    "SM_warning_panel_01",
+    "SM_warning_panel_02",
+    "SM_warning_panel_03",
+    "SM_warning_panel_04",
+    "SM_warning_panel_05",
+    "SM_warning_panel_06",
+    "SM_warning_panel_07",
+    "SM_warning_panel_08",
+    "SM_warning_panel_09"
+  ]
+}

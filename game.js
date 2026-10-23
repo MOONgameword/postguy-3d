@@ -18,8 +18,8 @@ import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './foot
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
 import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261023-japan-v1';
-import { installJapanDressing } from './japan-dressing.js?v=20261023-dressing-v1';
-import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
+import { installJapanDressing } from './japan-dressing.js?v=20261023-dressing-v2';
+import { installStreetComponents } from './street-components.js?v=20261023-street-cleanup-v1';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
@@ -2312,7 +2312,7 @@ async function boot() {
   setProgress(0.595, '布置招牌、店铺、庭院与架空线…');
   const [dressingBytes,dressingManifest,dressingLayout,dressingAtlas]=await Promise.all([
     fetchAsset('./assets/japan/props-v1.bin'),fetchAsset('./assets/japan/props-v1.json'),
-    fetchAsset('./assets/japan/dressing-layout-v1.json'),loadTex('./assets/japan/props-atlas-v1.png')
+    fetchAsset('./assets/japan/dressing-layout-v2.json'),loadTex('./assets/japan/props-atlas-v1.png')
   ]);
   streetDressing=installJapanDressing(city,
     decodeJapanAssets(dressingBytes,JSON.parse(new TextDecoder().decode(dressingManifest))),
