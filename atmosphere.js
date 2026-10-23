@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 
 // All colours are authored in sRGB; Three converts them to linear light.
-// The sky is an equirectangular panorama (assets/sky-lantian.jpg, 2560×1280).
+// The sky is an equirectangular panorama (assets/sky-cyan-v1.jpg, 3840×1920).
 // SKY_SUN is where the sun sits in that image (measured centroid); the panorama
 // is spun every frame so its painted sun lines up with the DirectionalLight, and
 // the light's elevation matches the painted sun's height (≈23°).
-const SKY_URL = './assets/sky-lantian.jpg?v=20261021';
-const SKY_SUN_U = 534.5 / 2560;
-const SKY_SUN_ANGLE = (0.5 - 474.9 / 1280) * Math.PI;
+const SKY_URL = './assets/sky-cyan-v1.jpg?v=20261023';
+const SKY_SUN_U = 801 / 3840;
+const SKY_SUN_ANGLE = (0.5 - 713 / 1920) * Math.PI;
 const SKY_SUN_ELEVATION = 0.92 * Math.tan(SKY_SUN_ANGLE);
 // On the small planet the ground horizon sits ~12° below the local horizontal.
 // This panorama already has open sky and cumulus down to about -23° (its cloud
@@ -20,7 +20,7 @@ const GROUND_DIP = THREE.MathUtils.degToRad(10);
 
 export const PALETTES = {
   day: {
-    fog: '#c6dcf3', light: '#fff7ea', skyFill: '#a9c6f5', ground: '#a3b48c', ambient: '#c9d6f0',
+    fog: '#b8d9dc', light: '#fff7ea', skyFill: '#a9c6f5', ground: '#a3b48c', ambient: '#c9d6f0',
     strength: 1.3, fill: 1.4, ambientStrength: 0.5, exposure: 1.0, elevation: SKY_SUN_ELEVATION,
   },
   evening: {

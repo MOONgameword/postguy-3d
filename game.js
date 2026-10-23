@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import {createSceneOutline} from './scene-outline.js?v=20261023-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261021-lantian';
+import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261023-cyansky-outline-v1';
 import { installNprShading } from './npr-shading.js?v=20261022-01';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
 import { createToonVehicleFleet } from './toon-vehicles.js?v=20261023-cars-v1';
@@ -97,6 +98,8 @@ renderer.shadowMap.type = IS_MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMa
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
+const sceneOutline=createSceneOutline(renderer,{mobile:IS_MOBILE});
+function renderScene(){sceneOutline.render(scene,camera,{overview:scenicView||introPreview});}
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xbcdcf2, CFG.fog[0], CFG.fog[1]);
@@ -2135,7 +2138,7 @@ function loop() {
       ` 里程=${(state.odo || 0).toFixed(0)}m/${time.toFixed(0)}s`;
   }
   if (time - (state.miniTime || 0) > .10) { drawMini(); state.miniTime = time; }
-  renderer.render(scene, camera);
+  renderScene();
 }
 
 /* ---------- 启动 ---------- */
@@ -2454,7 +2457,7 @@ async function boot() {
   if (/(\?|&)fx/.test(location.search)) setInterval(() => { flyLetter(); coinPop(128); }, 700);
   setProgress(1, '出发！');
   $('loading').style.display = 'none';
-  renderer.render(scene, camera);
+  renderScene();
 
   if (/(\?|&)footest/.test(location.search)) {
     const boneOf = boyRoot.getObjectByName('R_Thigh');
@@ -2487,7 +2490,7 @@ async function boot() {
     run2('站 1s', 1, { stop: true });
     stickVec.x = stickVec.y = 0; gasOn = false;
     $('dbg').textContent = res.join('\n');
-    renderer.render(scene, camera);
+    renderScene();
     return;
   }
 
@@ -2539,7 +2542,7 @@ async function boot() {
       `终距${state.target ? arcDist(player.position, state.target).toFixed(0) : '-'}m`);
     $('dbg').textContent = `R=${PLANET.R.toFixed(1)} 几何体=${state.geoUnique} ` +
       `地形三角=${((state.terrainTris || 0) / 1000) | 0}k 占用物=${state.occObjects || 0}\n` + res.join('\n');
-    renderer.render(scene, camera);
+    renderScene();
     return;
   }
 
@@ -2585,7 +2588,7 @@ async function boot() {
       '全路网阻挡: '+(networkFailures.join(' / ')||'0')+'\n'+
       traffic.map(c=>c.id+':'+c.why+' 路径'+c.nav?.path+' '+(c.wallReason||'')).join(' / ');
     player.position.copy(savedPlayer);
-    renderer.render(scene, camera);
+    renderScene();
     return;
   }
 
