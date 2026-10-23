@@ -1,8 +1,8 @@
 from pathlib import Path
-import json,numpy as np
+import json,numpy as np,sys
 from PIL import Image
 ROOT=Path(__file__).resolve().parents[1];TEMP=Path(r'D:\GPT\output\japan-game-export')
-for kind in ['buildings','trees']:
+for kind in (['props'] if '--props' in sys.argv else ['buildings','trees']):
  spec=json.loads((TEMP/f'{kind}-atlas.json').read_text());size=spec['size'];cell=spec['cell'];inner=spec['inner'];pad=spec['pad'];cols=size//cell
  atlas=Image.new('RGBA',(size,size),(255,255,255,0))
  for i,t in enumerate(spec['tiles']):

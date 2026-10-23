@@ -18,6 +18,7 @@ import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './foot
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
 import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261023-japan-v1';
+import { installJapanDressing } from './japan-dressing.js?v=20261023-dressing-v1';
 import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
@@ -25,6 +26,7 @@ import { addCharacterOutline } from './character-outline.js?v=20261012-01';
 import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261013-02';
 
 let meadowPlants = null;
+let streetDressing = null;
 
 /* ?pc / ?mob 强制切换手机/桌面档：headless 截图和手机档的画质差别很大
    （比如手机档城市不投影），排查画面问题时必须能指定跑哪一档。 */
@@ -1138,7 +1140,7 @@ function prepareHorizon(root) {
   const eyeAng = Math.acos(clamp(PLANET.R / (PLANET.R + EYE), -1, 1));
   const maxAng = VIEW_ARC / PLANET.R;
   root.traverse(o => {
-    if (!o.isMesh || o.userData.__outline || TERRAIN.test(o.name)) return;
+    if (!o.isMesh || o.userData.__outline || o.userData.collisionOnly || o.userData.japanDressingBatch || TERRAIN.test(o.name)) return;
     _hzB.setFromObject(o);
     if (_hzB.isEmpty()) return;
     _hzB.getCenter(_hzC).sub(PLANET.C);
@@ -2122,6 +2124,7 @@ function loop() {
   const fp = focusPos();
   fUp(focusFrame(), _lpU);
   horizonCull(focusFrame());
+  streetDressing?.update(camera.position,scenicView||introPreview);
   _lpN.copy(YAXIS).addScaledVector(_lpU, -YAXIS.dot(_lpU));
   if (_lpN.lengthSq() < 1e-6) fFwd(focusFrame(), _lpN);
   _lpN.normalize();
@@ -2306,6 +2309,15 @@ async function boot() {
   if (DEBUG) console.info('Surface textures:', surfaces);
   const manholes = createManholes(scene, trafficLanes, await Promise.all(MANHOLE_TEXTURES.map(loadTex)), renderer);
   if (DEBUG) console.info('Manholes:', manholes.count);
+  setProgress(0.595, '布置招牌、店铺、庭院与架空线…');
+  const [dressingBytes,dressingManifest,dressingLayout,dressingAtlas]=await Promise.all([
+    fetchAsset('./assets/japan/props-v1.bin'),fetchAsset('./assets/japan/props-v1.json'),
+    fetchAsset('./assets/japan/dressing-layout-v1.json'),loadTex('./assets/japan/props-atlas-v1.png')
+  ]);
+  streetDressing=installJapanDressing(city,
+    decodeJapanAssets(dressingBytes,JSON.parse(new TextDecoder().decode(dressingManifest))),
+    japanMaterials(dressingAtlas,'props'),JSON.parse(new TextDecoder().decode(dressingLayout)),{mobile:IS_MOBILE});
+  if(DEBUG)console.info('Japan street dressing:',JSON.stringify(streetDressing.stats));
   bakeGround(city);
   await new Promise(r => setTimeout(r, 16));
 
@@ -2339,7 +2351,7 @@ async function boot() {
   /* 减少场景物件后再创建描边；地表本身不能描边，避免包住整个星球。 */
   const inked = [];
   const isStreetComponent = o => { for (let p = o; p; p = p.parent) if (p.userData.streetComponent) return true; return false; };
-  city.traverse(o => { if (o.isMesh && !isStreetComponent(o) && !TERRAIN.test(o.name) && !/^Grass/i.test(o.name) && !o.userData.stylizedTree) inked.push(o); });
+  city.traverse(o => { if (o.isMesh && !o.userData.collisionOnly && !o.userData.japanDressingBatch && !isStreetComponent(o) && !TERRAIN.test(o.name) && !/^Grass/i.test(o.name) && !o.userData.stylizedTree) inked.push(o); });
   for (const o of inked) addOutline(o, 0.015 * S);
   // Street-kit components are outlined even when the optional global outline
   // debug flag is off; their small shells keep the authored kit readable.
@@ -2400,6 +2412,21 @@ async function boot() {
 
   setProgress(0.93, '投放邮箱…');
   state.q.copy(pickSpawn());
+  // Reproducible art review point; ordinary gameplay keeps its normal spawn.
+  const reviewBuilding = new URLSearchParams(location.search).get('streetview');
+  if (DEBUG && reviewBuilding) {
+    const b=city.getObjectByName('Bld_Japan_'+reviewBuilding.padStart(4,'0'));
+    if(b){
+      const target=b.getWorldPosition(new THREE.Vector3());
+      const forward=new THREE.Vector3(0,0,1).transformDirection(b.matrixWorld);
+      const right=new THREE.Vector3(1,0,0).transformDirection(b.matrixWorld);
+      b.geometry.computeBoundingBox();
+      const front=b.geometry.boundingBox.max.z*b.getWorldScale(new THREE.Vector3()).x;
+      const p=target.clone().addScaledVector(forward,front+25).addScaledVector(right,-18);
+      const q=frameFromDir(p.clone().sub(PLANET.C).normalize(),target.clone().sub(p));
+      if(driveAt(q,CFG.bikeRadius)&&!blockedAt(q,CFG.bikeRadius))state.q.copy(q);
+    }
+  }
   // Shareable lake view: start on the existing street facing the new scenery.
   if (new URLSearchParams(location.search).has('lake')) {
     const lakeTarget = lakePoint(0, -165);

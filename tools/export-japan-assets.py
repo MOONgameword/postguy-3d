@@ -1,5 +1,5 @@
 """Read-only extraction of the user's asset library; shared atlas + two LODs."""
-import bpy,json,math,zlib,hashlib
+import bpy,json,math,zlib,hashlib,sys
 import numpy as np
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
@@ -30,7 +30,14 @@ def describe(m):
   desc['cutoff']=alpha.inputs[1].default_value if alpha.type=='MATH' and alpha.operation=='GREATER_THAN' else .3
  return desc
 
-for kind,selected in [('buildings',names),('trees',trees)]:
+sets=[('buildings',names),('trees',trees)]
+if '--props' in sys.argv:
+ # Keep the planet's existing roads, pavement and buildings. Export the other
+ # authored pieces for additive street dressing and small garden settings.
+ excluded=set(names+trees)
+ excluded.update(o.name for o in bpy.context.scene.objects if o.name.startswith(('SM_sidewalk','SM_curbs','SM_street')))
+ sets=[('props',sorted(o.name for o in bpy.context.scene.objects if o.type=='MESH' and o.name not in excluded))]
+for kind,selected in sets:
  mats={};tiles=[];keys={}
  for name in selected:
   for m in bpy.data.objects[name].data.materials:
@@ -39,21 +46,21 @@ for kind,selected in [('buildings',names),('trees',trees)]:
    desc=describe(m);uv=desc.pop('uv');signature=json.dumps(desc,sort_keys=True)
    if signature not in keys:keys[signature]=len(tiles);tiles.append(desc)
    mats[key]=(keys[signature],uv)
- inner=256 if kind=='buildings' else 512;pad=8;cell=inner+2*pad
+ inner=512 if kind=='trees' else 256;pad=8;cell=inner+2*pad
  size=2**math.ceil(math.log2(math.ceil(math.sqrt(len(tiles)))*cell));cols=size//cell
  while cols*cols<len(tiles):size*=2;cols=size//cell
  chunks=[];records=[];offset=0
  def extract(obj,center=None):
   obj.data.calc_loop_triangles();mesh=obj.data
-  world=obj.matrix_world;normalmat=world.to_3x3().inverted().transposed();uv=mesh.uv_layers.active.data
+  world=obj.matrix_world;normalmat=world.to_3x3().inverted().transposed();uv=mesh.uv_layers.active.data if mesh.uv_layers.active else None
   rows=[];bark=[]
   for tri in mesh.loop_triangles:
    m=mesh.materials[tri.material_index];tile,transform=mats[m.name if m else 'NULL'];sx,sy,ox,oy=transform
    x=tile%cols*cell+pad;y=tile//cols*cell+pad
    rect=[x/size,1-(y+inner)/size,inner/size,inner/size]
    for vi,li in zip(tri.vertices,tri.loops):
-    p=world@mesh.vertices[vi].co;n=(normalmat@mesh.corner_normals[li].vector).normalized();u=uv[li].uv
-    rows.append([p.x,p.z,-p.y,n.x,n.z,-n.y,u.x*sx+ox,u.y*sy+oy,*rect])
+    p=world@mesh.vertices[vi].co;n=(normalmat@mesh.corner_normals[li].vector).normalized();u=uv[li].uv if uv else (0,0)
+    rows.append([p.x,p.z,-p.y,n.x,n.z,-n.y,u[0]*sx+ox,u[1]*sy+oy,*rect])
     bark.append(bool(m and 'tree_base' in m.name))
   a=np.array(rows,dtype='<f4');lo=a[:,:3].min(axis=0);hi=a[:,:3].max(axis=0)
   if center is None:
@@ -72,6 +79,8 @@ for kind,selected in [('buildings',names),('trees',trees)]:
   # Preserve a collision-only copy from source bark, never from leaf cards.
   if kind=='trees':record['trunk']=store(a[bark])
   for lod,target in [('near',12000 if kind=='buildings' else 4000),('far',2300 if kind=='buildings' else 1250)]:
+   if kind=='props':
+    record[lod]=store(a) if lod=='near' else record['near'];continue
    # Aggressive collapse destroys the disconnected thin facade panels in this
    # kit. Buildings share the verified near mesh at distance; trees retain LOD.
    if lod=='far' and kind=='buildings':
