@@ -1,0 +1,466 @@
+{
+  "stride": 12,
+  "source": "Idyllic_Anime_Japan_\u8d44\u4ea7\u5408\u96c6.blend",
+  "variants": [
+    {
+      "id": 0,
+      "name": "SM_apartment_building_01",
+      "size": [
+        12.17650032043457,
+        28.944534301757812,
+        8.054473876953125
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 53996,
+      "near": {
+        "start": 0,
+        "count": 36000
+      },
+      "far": {
+        "start": 0,
+        "count": 36000
+      }
+    },
+    {
+      "id": 1,
+      "name": "SM_apartment_building_02",
+      "size": [
+        9.522449493408203,
+        19.458467483520508,
+        9.718231201171875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 31284,
+      "near": {
+        "start": 36000,
+        "count": 36000
+      },
+      "far": {
+        "start": 36000,
+        "count": 36000
+      }
+    },
+    {
+      "id": 2,
+      "name": "SM_apartment_building_03",
+      "size": [
+        12.176498413085938,
+        16.641605377197266,
+        8.054473876953125
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 30728,
+      "near": {
+        "start": 72000,
+        "count": 35997
+      },
+      "far": {
+        "start": 72000,
+        "count": 35997
+      }
+    },
+    {
+      "id": 3,
+      "name": "SM_apartment_building_04",
+      "size": [
+        11.053306579589844,
+        24.207456588745117,
+        8.472991943359375
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 28014,
+      "near": {
+        "start": 107997,
+        "count": 35997
+      },
+      "far": {
+        "start": 107997,
+        "count": 35997
+      }
+    },
+    {
+      "id": 4,
+      "name": "SM_apartment_building_05",
+      "size": [
+        11.053306579589844,
+        44.42752456665039,
+        8.472991943359375
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 53110,
+      "near": {
+        "start": 143994,
+        "count": 35997
+      },
+      "far": {
+        "start": 143994,
+        "count": 35997
+      }
+    },
+    {
+      "id": 5,
+      "name": "SM_convenience_store",
+      "size": [
+        12.128585815429688,
+        5.25720739364624,
+        8.894439697265625
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 7116,
+      "near": {
+        "start": 179991,
+        "count": 21348
+      },
+      "far": {
+        "start": 179991,
+        "count": 21348
+      }
+    },
+    {
+      "id": 6,
+      "name": "SM_house_residential_attachment_01",
+      "size": [
+        6.458198547363281,
+        5.430400848388672,
+        7.550811767578125
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 7670,
+      "near": {
+        "start": 201339,
+        "count": 23010
+      },
+      "far": {
+        "start": 201339,
+        "count": 23010
+      }
+    },
+    {
+      "id": 7,
+      "name": "SM_house_residential_building_01",
+      "size": [
+        9.28868293762207,
+        9.247604370117188,
+        8.518951416015625
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 12399,
+      "near": {
+        "start": 224349,
+        "count": 35997
+      },
+      "far": {
+        "start": 224349,
+        "count": 35997
+      }
+    },
+    {
+      "id": 8,
+      "name": "SM_house_residential_building_02",
+      "size": [
+        7.797311782836914,
+        7.968576908111572,
+        10.148406982421875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 10886,
+      "near": {
+        "start": 260346,
+        "count": 32658
+      },
+      "far": {
+        "start": 260346,
+        "count": 32658
+      }
+    },
+    {
+      "id": 9,
+      "name": "SM_house_residential_building_03",
+      "size": [
+        7.859216690063477,
+        5.925912380218506,
+        8.23193359375
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 6752,
+      "near": {
+        "start": 293004,
+        "count": 20256
+      },
+      "far": {
+        "start": 293004,
+        "count": 20256
+      }
+    },
+    {
+      "id": 10,
+      "name": "SM_ramenshop",
+      "size": [
+        6.521419525146484,
+        4.491273403167725,
+        4.5954437255859375
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 14712,
+      "near": {
+        "start": 313260,
+        "count": 36000
+      },
+      "far": {
+        "start": 313260,
+        "count": 36000
+      }
+    },
+    {
+      "id": 11,
+      "name": "SM_restaurant_traditional_building",
+      "size": [
+        8.48931884765625,
+        8.029097557067871,
+        8.327880859375
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 23852,
+      "near": {
+        "start": 349260,
+        "count": 36000
+      },
+      "far": {
+        "start": 349260,
+        "count": 36000
+      }
+    },
+    {
+      "id": 12,
+      "name": "SM_shop_building_01",
+      "size": [
+        6.3938446044921875,
+        8.456803321838379,
+        7.7381591796875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 14838,
+      "near": {
+        "start": 385260,
+        "count": 36000
+      },
+      "far": {
+        "start": 385260,
+        "count": 36000
+      }
+    },
+    {
+      "id": 13,
+      "name": "SM_shop_building_02",
+      "size": [
+        6.9691619873046875,
+        9.67064094543457,
+        6.972381591796875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 18172,
+      "near": {
+        "start": 421260,
+        "count": 36000
+      },
+      "far": {
+        "start": 421260,
+        "count": 36000
+      }
+    },
+    {
+      "id": 14,
+      "name": "SM_shop_building_03",
+      "size": [
+        5.681221008300781,
+        9.671783447265625,
+        7.5611724853515625
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4340,
+      "near": {
+        "start": 457260,
+        "count": 13020
+      },
+      "far": {
+        "start": 457260,
+        "count": 13020
+      }
+    },
+    {
+      "id": 15,
+      "name": "SM_shop_building_04",
+      "size": [
+        6.290618896484375,
+        9.669379234313965,
+        8.078994750976562
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 21178,
+      "near": {
+        "start": 470280,
+        "count": 35994
+      },
+      "far": {
+        "start": 470280,
+        "count": 35994
+      }
+    },
+    {
+      "id": 16,
+      "name": "SM_shop_building_05",
+      "size": [
+        6.4474945068359375,
+        8.456803321838379,
+        7.7381591796875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 14262,
+      "near": {
+        "start": 506274,
+        "count": 36000
+      },
+      "far": {
+        "start": 506274,
+        "count": 36000
+      }
+    },
+    {
+      "id": 17,
+      "name": "SM_store_rowbuilding_01",
+      "size": [
+        5.514963150024414,
+        10.93021011352539,
+        7.42852783203125
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4616,
+      "near": {
+        "start": 542274,
+        "count": 13848
+      },
+      "far": {
+        "start": 542274,
+        "count": 13848
+      }
+    },
+    {
+      "id": 18,
+      "name": "SM_store_rowbuilding_02",
+      "size": [
+        5.4532012939453125,
+        11.430680274963379,
+        7.75152587890625
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 5682,
+      "near": {
+        "start": 556122,
+        "count": 17046
+      },
+      "far": {
+        "start": 556122,
+        "count": 17046
+      }
+    },
+    {
+      "id": 19,
+      "name": "SM_store_rowbuilding_03",
+      "size": [
+        5.48640251159668,
+        12.059808731079102,
+        7.24188232421875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 4826,
+      "near": {
+        "start": 573168,
+        "count": 14478
+      },
+      "far": {
+        "start": 573168,
+        "count": 14478
+      }
+    }
+  ]
+}

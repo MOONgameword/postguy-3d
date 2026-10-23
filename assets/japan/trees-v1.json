@@ -1,0 +1,141 @@
+{
+  "stride": 12,
+  "source": "Idyllic_Anime_Japan_\u8d44\u4ea7\u5408\u96c6.blend",
+  "variants": [
+    {
+      "id": 0,
+      "name": "SM_tree_cherry",
+      "size": [
+        4.302471160888672,
+        6.241938591003418,
+        3.8771820068359375
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 2704,
+      "trunk": {
+        "start": 0,
+        "count": 2610
+      },
+      "near": {
+        "start": 2610,
+        "count": 8112
+      },
+      "far": {
+        "start": 10722,
+        "count": 3750
+      }
+    },
+    {
+      "id": 1,
+      "name": "SM_tree_cherry_02",
+      "size": [
+        4.254854202270508,
+        5.738190174102783,
+        3.6584396362304688
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 2468,
+      "trunk": {
+        "start": 14472,
+        "count": 1476
+      },
+      "near": {
+        "start": 15948,
+        "count": 7404
+      },
+      "far": {
+        "start": 23352,
+        "count": 3750
+      }
+    },
+    {
+      "id": 2,
+      "name": "SM_tree_garden",
+      "size": [
+        4.804370880126953,
+        4.25490140914917,
+        3.1677398681640625
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 3216,
+      "trunk": {
+        "start": 27102,
+        "count": 2028
+      },
+      "near": {
+        "start": 29130,
+        "count": 9648
+      },
+      "far": {
+        "start": 38778,
+        "count": 3750
+      }
+    },
+    {
+      "id": 3,
+      "name": "SM_tree_tall_01",
+      "size": [
+        4.752140045166016,
+        7.742456912994385,
+        4.303215026855469
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 2632,
+      "trunk": {
+        "start": 42528,
+        "count": 1542
+      },
+      "near": {
+        "start": 44070,
+        "count": 7896
+      },
+      "far": {
+        "start": 51966,
+        "count": 3750
+      }
+    },
+    {
+      "id": 4,
+      "name": "SM_tree_tall_02",
+      "size": [
+        4.00115966796875,
+        6.941793441772461,
+        4.678680419921875
+      ],
+      "front": [
+        0,
+        0,
+        1
+      ],
+      "sourceTriangles": 2468,
+      "trunk": {
+        "start": 55716,
+        "count": 1476
+      },
+      "near": {
+        "start": 57192,
+        "count": 7404
+      },
+      "far": {
+        "start": 64596,
+        "count": 3750
+      }
+    }
+  ]
+}

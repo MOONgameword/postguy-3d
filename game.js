@@ -17,13 +17,12 @@ import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
 import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261021-paint';
-import { replaceStylizedTrees, loadTreeTrunk, TREE_TRUNK_URL } from './stylized-trees.js?v=20260930-32';
+import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261023-japan-v1';
 import { installStreetComponents } from './street-components.js?v=20261015-street-kit-v3';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261012-01';
 import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261013-02';
-import { decodeStreetBuildings, streetBuildingMaterial, installStreetBuildings } from './street-buildings.js?v=20261014-01';
 
 let meadowPlants = null;
 
@@ -1176,8 +1175,8 @@ function horizonCull(q) {
     const dot = e.d.dot(_hzU);
     const v = dot >= Math.cos(Math.min(eyeAngle + e.topAngle + 0.05, maxAngle));
     e.o.visible = v;
-    if (v && e.o.userData.treeLod) {
-      const lod = e.o.userData.treeLod;
+    if (v && (e.o.userData.assetLod || e.o.userData.treeLod)) {
+      const lod = e.o.userData.assetLod || e.o.userData.treeLod;
       _hzP.setFromMatrixPosition(e.o.matrixWorld);
       const distance = _hzP.distanceToSquared(camera.position), limit = IS_MOBILE ? 105 : 175;
       const threshold = e.o.geometry === lod.far ? limit - 12 : limit + 12;
@@ -2229,18 +2228,21 @@ async function boot() {
   setProgress(0.52, '测量星球…');
   fitPlanet(city);
   setProgress(0.54, '连接圆弧路口…');
-  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas, crosswalkSignals] = await Promise.all([
+  const [roundedRoads, junctionFurniture, softTerrain, terrainProps, buildingLayout, trafficData, roadsideProps, buildingManifest, buildingMeshes, buildingAtlas, crosswalkSignals, treeManifest, treeMeshes, treeAtlas] = await Promise.all([
     withRetry('./assets/roads-rounded-v16.bin', () => fetchAsset('./assets/roads-rounded-v16.bin')),
     withRetry('./assets/junction-furniture-v4.json', () => fetchAsset('./assets/junction-furniture-v4.json')),
     withRetry('./assets/terrain-soft-v1.bin', () => fetchAsset('./assets/terrain-soft-v1.bin')),
     withRetry('./assets/terrain-props-v1.json', () => fetchAsset('./assets/terrain-props-v1.json')),
-    withRetry('./assets/buildings/street-layout-v2.json', () => fetchAsset('./assets/buildings/street-layout-v2.json')),
+    withRetry('./assets/japan/building-layout-v1.json', () => fetchAsset('./assets/japan/building-layout-v1.json')),
     withRetry('./assets/traffic-lanes-v1.json', () => fetchAsset('./assets/traffic-lanes-v1.json')),
-    withRetry('./assets/buildings/street-props-v2.json', () => fetchAsset('./assets/buildings/street-props-v2.json')),
-    withRetry('./assets/buildings/street-buildings-v1.json', () => fetchAsset('./assets/buildings/street-buildings-v1.json')),
-    withRetry('./assets/buildings/street-buildings-v1.bin', () => fetchAsset('./assets/buildings/street-buildings-v1.bin')),
-    loadTex('./assets/buildings/street-atlas-v1.png'),
-    withRetry('./assets/crosswalk-signals-v1.json', () => fetchAsset('./assets/crosswalk-signals-v1.json'))
+    withRetry('./assets/japan/landscape-layout-v1.json', () => fetchAsset('./assets/japan/landscape-layout-v1.json')),
+    withRetry('./assets/japan/buildings-v1.json', () => fetchAsset('./assets/japan/buildings-v1.json')),
+    withRetry('./assets/japan/buildings-v1.bin', () => fetchAsset('./assets/japan/buildings-v1.bin')),
+    loadTex('./assets/japan/buildings-atlas-v1.png'),
+    withRetry('./assets/crosswalk-signals-v1.json', () => fetchAsset('./assets/crosswalk-signals-v1.json')),
+    withRetry('./assets/japan/trees-v1.json', () => fetchAsset('./assets/japan/trees-v1.json')),
+    withRetry('./assets/japan/trees-v1.bin', () => fetchAsset('./assets/japan/trees-v1.bin')),
+    loadTex('./assets/japan/trees-atlas-v1.png')
   ]);
   installRoadGeometry(city, decodeRoadGeometry(roundedRoads));
   installJunctionFurniture(city, JSON.parse(new TextDecoder().decode(junctionFurniture)));
@@ -2254,12 +2256,12 @@ async function boot() {
   // Replace every original building, including the old lakeside landmark.
   // Each shared variant has its entrance along +Z; offline placements rotate
   // that axis toward its street and leave one clear row of frontages.
-  const buildingStats = installStreetBuildings(city,
-    decodeStreetBuildings(buildingMeshes, JSON.parse(new TextDecoder().decode(buildingManifest))),
-    streetBuildingMaterial(buildingAtlas), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
-  if (DEBUG) console.info('Roadside buildings:', buildingStats);
+  const buildingStats = installJapanBuildings(city,
+    decodeJapanAssets(buildingMeshes, JSON.parse(new TextDecoder().decode(buildingManifest))),
+    japanMaterials(buildingAtlas, 'buildings'), JSON.parse(new TextDecoder().decode(buildingLayout)), IS_MOBILE);
+  if (DEBUG) console.info('Japan buildings:', JSON.stringify(buildingStats));
   installBuildingRoadLayout(city,JSON.parse(new TextDecoder().decode(roadsideProps)));
-  if (DEBUG) console.info('Street layout release: 20261015-frontage-v4 (roads v16, lamps v6, signals v2, buildings v2)');
+  if (DEBUG) console.info('Street layout release: 20261023-japan-v1 (roads v16, Japan buildings and trees v1)');
 
   setProgress(0.575, '替换路灯与街道组件…');
   const streetKit = await loadGLB('./assets/street-components-v1.glb');
@@ -2287,10 +2289,11 @@ async function boot() {
 
   const grassLevel = raiseGrassLevel(city);
   if (DEBUG) console.info('Grass level:', grassLevel);
-  setProgress(0.58, '种下木纹树干…');
-  const trunkAsset = await withRetry(TREE_TRUNK_URL, async () => loadTreeTrunk(await fetchAsset(TREE_TRUNK_URL)));
-  const trees = replaceStylizedTrees(city, { mobile: IS_MOBILE, trunkAsset });
-  if (DEBUG) console.info('Stylized trees:', trees);
+  setProgress(0.58, '种下日式庭园树与樱花树…');
+  const trees = installJapanTrees(city,
+    decodeJapanAssets(treeMeshes, JSON.parse(new TextDecoder().decode(treeManifest))),
+    japanMaterials(treeAtlas, 'trees'), IS_MOBILE);
+  if (DEBUG) console.info('Japan trees:', JSON.stringify(trees));
   /* 场景里不要石头：去掉城市自带的 Rock_* 模型（在烘焙地面 / 碰撞 / 撒草之前，草会长满原来的位置） */
   const rockMeshes = [];
   city.traverse(o => { if (o.isMesh && /^Rock_/.test(o.name)) rockMeshes.push(o); });
