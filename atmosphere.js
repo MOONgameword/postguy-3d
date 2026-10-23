@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
 // All colours are authored in sRGB; Three converts them to linear light.
-// The sky is an equirectangular panorama (assets/sky-cyan-v1.jpg, 3840×1920).
+// The sky is an equirectangular panorama (assets/sky-cyan-original.png, 3840×1920).
 // SKY_SUN is where the sun sits in that image (measured centroid); the panorama
 // is spun every frame so its painted sun lines up with the DirectionalLight, and
 // the light's elevation matches the painted sun's height (≈23°).
-const SKY_URL = './assets/sky-cyan-v1.jpg?v=20261023';
+const SKY_URL = './assets/sky-cyan-original.png?v=20261023';
 const SKY_SUN_U = 801 / 3840;
 const SKY_SUN_ANGLE = (0.5 - 713 / 1920) * Math.PI;
 const SKY_SUN_ELEVATION = 0.92 * Math.tan(SKY_SUN_ANGLE);

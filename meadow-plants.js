@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {excludeBlendedGrass} from './outline-mask.js?v=20261023-v1';
 import { lakeMetric } from './lakeside.js?v=20261021-norock';
 import { TURF_GLSL } from './surface-materials.js?v=20261021-granite';
 
@@ -182,6 +183,7 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
   }
   const grassGeometry = model.geometry;
   const grassMaterial = material(false, model.material);
+  excludeBlendedGrass(grassMaterial);
   const grass = new T.InstancedMesh(grassGeometry, grassMaterial, capacity);
   const farGrass = model?.farGeometry ? new T.InstancedMesh(model.farGeometry, grassMaterial, farCapacity) : null;
   const stems = new T.InstancedMesh(stemGeometry(), material(), Math.ceil(capacity * .14));

@@ -1,9 +1,12 @@
 import * as T from 'three';
+import {setOutlineMask,useOutlineMask} from './outline-mask.js?v=20261023-v1';
 import {mergeGeometries} from './vendor/utils/BufferGeometryUtils.js';
 
 /** Shared model/atlas instances; visibility compacts each draw, rather than
  * cloning thousands of meshes or submitting the opposite side of the planet. */
 export function installJapanDressing(city,variants,materials,layout,{mobile=false}={}){
+  for(const v of variants)setOutlineMask(v.near,()=>!/^SM_(grass_|leaves_ground)/.test(v.name));
+  useOutlineMask(materials.material);
   const source=new Map(variants.map(v=>[v.name,v])),groups=new Map();
   const root=new T.Group();root.name='JapanStreetDressing';city.add(root);city.updateMatrixWorld(true);
   const inverse=root.matrixWorld.clone().invert(),matrix=new T.Matrix4();

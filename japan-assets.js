@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {maskTreeLeaves} from './outline-mask.js?v=20261023-v1';
 import { unzlibSync } from './vendor/libs/fflate.module.js';
 
 export const JAPAN_VERSION = '20261023-japan-v1';
@@ -61,6 +62,7 @@ export function installJapanBuildings(city,variants,materials,placements,mobile=
 }
 const hash=name=>{let h=2166136261;for(const c of name)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
 export function installJapanTrees(city,variants,materials,mobile=false) {
+  maskTreeLeaves(variants,materials.material);
   city.updateMatrixWorld(true);const trees=[];city.traverse(o=>{if(o.isMesh&&/^Tree_/.test(o.name))trees.push(o)});
   const point=new T.Vector3(),axis=new T.Vector3(0,1,0);
   for(const tree of trees){

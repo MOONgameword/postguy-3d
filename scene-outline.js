@@ -43,6 +43,10 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
         float crease=max(abs(l+r-2.*c),abs(b+t-2.*c));
         float threshold=max(.12,nearest*.012);
         float edge=smoothstep(threshold,threshold*2.4,crease);
+        // Also sample neighbours so the outside half of foliage contours
+        // disappears, rather than leaving a dark halo around uninked leaves.
+        float allowed=min(base.a,min(min(texture2D(colorMap,vUv-dx).a,texture2D(colorMap,vUv+dx).a),min(texture2D(colorMap,vUv-dy).a,texture2D(colorMap,vUv+dy).a)));
+        edge*=smoothstep(.5,.98,allowed);
         float fade=1.-smoothstep(fogRange.x,fogRange.y,nearest);
         edge*=mix(fade,.22,overview);
         gl_FragColor=base;
@@ -50,6 +54,7 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
         // The authored sky is unlit and was already intentionally toneMapped=false.
         if(raw>.999999)gl_FragColor=base;
         gl_FragColor.rgb=mix(gl_FragColor.rgb,ink,edge*.84);
+        gl_FragColor.a=1.;
         #include <colorspace_fragment>
       }`,
   });
