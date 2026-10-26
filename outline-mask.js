@@ -28,7 +28,13 @@ export function maskTreeLeaves(variants,material){
     const bark=new Set(),tile=v.trunk.attributes.buildingTile;
     const key=(a,i)=>[a.getX(i),a.getY(i),a.getZ(i),a.getW(i)].join(',');
     for(let i=0;i<tile.count;i++)bark.add(key(tile,i));
-    for(const g of new Set([v.near,v.far]))setOutlineMask(g,i=>bark.has(key(g.attributes.buildingTile,i)));
+    for(const g of new Set([v.near,v.far])){
+      // 2 marks the canopy, 1 bark, 0 other excluded foliage. Keep leaf
+      // geometry out of depth creases; the composite outlines its coverage.
+      const values=new Float32Array(g.attributes.position.count);
+      for(let i=0;i<values.length;i++)values[i]=bark.has(key(g.attributes.buildingTile,i))?1:2;
+      g.setAttribute('outlineAllowed',new T.BufferAttribute(values,1));
+    }
   }
   useOutlineMask(material);
 }

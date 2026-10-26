@@ -7,7 +7,7 @@ maskTreeLeaves(variants,material);
 for(const v of variants)for(const g of new Set([v.near,v.far])){
  const mask=g.attributes.outlineAllowed;
  assert.equal(mask.count,g.attributes.position.count);
- assert.ok(mask.array.some(n=>n===0),v.name+' has unoutlined leaves');
+ assert.ok(mask.array.some(n=>n===2),v.name+' has canopy silhouette mask');
  assert.ok(mask.array.some(n=>n===1),v.name+' retains outlined bark');
  for(let i=0;i<mask.count;i+=3)assert.ok(mask.getX(i)===mask.getX(i+1)&&mask.getX(i)===mask.getX(i+2),'No interpolated masks across a face');
 }
@@ -24,4 +24,4 @@ assert.equal(water.blendSrc,T.SrcAlphaFactor);
 assert.equal(water.blendDst,T.OneMinusSrcAlphaFactor);
 assert.equal(water.blendSrcAlpha,T.ZeroFactor);
 assert.equal(water.blendDstAlpha,T.ZeroFactor);
-console.log({result:'PASS',treeVariants:variants.length,grassRgbBlend:'unchanged',leafOutline:false,barkOutline:true});
+console.log({result:'PASS',treeVariants:variants.length,grassRgbBlend:'unchanged',canopyOutline:'silhouette only',barkOutline:true});

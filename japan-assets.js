@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {maskTreeLeaves} from './outline-mask.js?v=20261023-v1';
+import {maskTreeLeaves} from './outline-mask.js?v=20261026-canopy-v1';
 import { unzlibSync } from './vendor/libs/fflate.module.js';
 
 export const JAPAN_VERSION = '20261023-japan-v1';

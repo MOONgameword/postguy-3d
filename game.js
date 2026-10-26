@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createSceneOutline} from './scene-outline.js?v=20261026-far-gray-v1';
+import {createSceneOutline} from './scene-outline.js?v=20261026-canopy-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
@@ -19,7 +19,7 @@ import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
 import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261027-water-mask-v2';
-import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261023-mask-v1';
+import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261026-canopy-v1';
 import { installJapanDressing } from './japan-dressing.js?v=20261023-mask-v1';
 import { installStreetComponents } from './street-components.js?v=20261026-no-sidewalk-props-v1';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
