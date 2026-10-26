@@ -15,7 +15,7 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
   const uniforms={
     colorMap:{value:target.texture},depthMap:{value:target.depthTexture},
     texel:{value:new T.Vector2(1,1)},nearFar:{value:new T.Vector2()},
-    width:{value:1.15},ink:{value:new T.Color('#000000')},
+    width:{value:1.15},ink:{value:new T.Color('#000000')},farInk:{value:new T.Color('#454b50')},
     fogRange:{value:new T.Vector2(250,600)},overview:{value:0},
   };
   const material=new T.ShaderMaterial({
@@ -25,7 +25,7 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
       uniform sampler2D colorMap,depthMap;
       uniform vec2 texel,nearFar,fogRange;
       uniform float width,overview;
-      uniform vec3 ink;
+      uniform vec3 ink,farInk;
       varying vec2 vUv;
       float distanceAt(vec2 uv){
         float d=texture2D(depthMap,uv).x;
@@ -38,13 +38,9 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
         vec2 dx=vec2(texel.x*width,0.),dy=vec2(0.,texel.y*width);
         float l=distanceAt(vUv-dx),r=distanceAt(vUv+dx),b=distanceAt(vUv-dy),t=distanceAt(vUv+dy);
         float nearest=min(c,min(min(l,r),min(b,t)));
-        // Probe the nearest surface first, including the outside of silhouettes.
-        // Then narrow the sampling footprint with distance on both sides of an edge.
+        // The contour footprint stays constant at every distance. Only the
+        // colour/strength changes, so distant lines do not become thinner.
         float distanceMix=smoothstep(mix(35.,250.,overview),mix(260.,1600.,overview),nearest);
-        float widthScale=mix(1.18,.45,distanceMix);
-        dx*=widthScale;dy*=widthScale;
-        l=distanceAt(vUv-dx);r=distanceAt(vUv+dx);
-        b=distanceAt(vUv-dy);t=distanceAt(vUv+dy);
         // Second depth difference highlights silhouettes while cancelling
         // smooth slopes, avoiding ink over every ground pixel.
         float crease=max(abs(l+r-2.*c),abs(b+t-2.*c));
@@ -60,7 +56,8 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
         #include <tonemapping_fragment>
         // The authored sky is unlit and was already intentionally toneMapped=false.
         if(raw>.999999)gl_FragColor=base;
-        gl_FragColor.rgb=mix(gl_FragColor.rgb,ink,edge*.84);
+        vec3 contourColor=mix(ink,farInk,distanceMix);
+        gl_FragColor.rgb=mix(gl_FragColor.rgb,contourColor,edge*.84);
         gl_FragColor.a=1.;
         #include <colorspace_fragment>
       }`,
@@ -72,7 +69,7 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
     renderer.getDrawingBufferSize(size);
     if(target.width!==size.x||target.height!==size.y)target.setSize(size.x,size.y);
     uniforms.texel.value.set(1/size.x,1/size.y);
-    uniforms.width.value=Math.max(1,renderer.getPixelRatio())*(overview?.8:1.1);
+    uniforms.width.value=Math.max(1,renderer.getPixelRatio())*1.1;
     uniforms.nearFar.value.set(view.near,view.far);
     uniforms.fogRange.value.set(world.fog?.near??250,world.fog?.far??600);
     uniforms.overview.value=overview?1:0;

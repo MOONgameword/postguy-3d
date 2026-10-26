@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createSceneOutline} from './scene-outline.js?v=20261026-distance-v1';
+import {createSceneOutline} from './scene-outline.js?v=20261026-far-gray-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
@@ -21,11 +21,11 @@ import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20
 import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261023-mask-v1';
 import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261023-mask-v1';
 import { installJapanDressing } from './japan-dressing.js?v=20261023-mask-v1';
-import { installStreetComponents } from './street-components.js?v=20261023-street-cleanup-v1';
+import { installStreetComponents } from './street-components.js?v=20261026-no-sidewalk-props-v1';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
-import { addCharacterOutline } from './character-outline.js?v=20261026-distance-v1';
-import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261026-distance-v1';
+import { addCharacterOutline } from './character-outline.js?v=20261026-far-gray-v1';
+import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261026-far-gray-v1';
 
 let meadowPlants = null;
 let streetDressing = null;
@@ -220,9 +220,13 @@ function outlineMaterial(thickness) {
   if (outlineMats.has(key)) return outlineMats.get(key);
   const m = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR, side: THREE.BackSide, fog: true });
   m.onBeforeCompile = shader => {
-    shader.vertexShader = 'attribute vec3 aHull;\n' + shader.vertexShader.replace(
+    shader.uniforms.outlineFarColor = { value: new THREE.Color(0x454b50) };
+    shader.vertexShader = 'attribute vec3 aHull; varying float vHullDistance;\n' + shader.vertexShader.replace(
       '#include <begin_vertex>',
       '#include <begin_vertex>\n\ttransformed += aHull * ' + Number(key).toFixed(6) + ';');
+    shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvHullDistance=max(0.,-mvPosition.z);');
+    shader.fragmentShader = 'varying float vHullDistance; uniform vec3 outlineFarColor;\n' + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace('#include <output_fragment>', 'float hullDistanceMix=smoothstep(35.,260.,vHullDistance);\nvec3 hullColor=mix(vec3(0.0),outlineFarColor,hullDistanceMix);\ndiffuseColor.rgb=hullColor;\n#include <output_fragment>');
   };
   m.customProgramCacheKey = () => 'outline' + key;
   outlineMats.set(key, m);

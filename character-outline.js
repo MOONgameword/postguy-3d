@@ -30,10 +30,15 @@ export function addCharacterOutline(root, width = .018) {
     });
     material.onBeforeCompile = shader => {
       shader.uniforms.outlineWidth = { value: localWidth };
-      shader.vertexShader = 'attribute vec3 outlineNormal; uniform float outlineWidth;\n' + shader.vertexShader;
+      shader.uniforms.outlineFarColor = { value: new T.Color(0x454b50) };
+      shader.vertexShader = 'attribute vec3 outlineNormal; uniform float outlineWidth; varying float vOutlineDistance;\n' + shader.vertexShader;
       // Displace before skinning; the same bone blend deforms the outline too.
       shader.vertexShader = shader.vertexShader.replace('#include <skinning_vertex>',
         'transformed += outlineNormal * outlineWidth;\n#include <skinning_vertex>');
+      shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvOutlineDistance=max(0.,-mvPosition.z);');
+      shader.fragmentShader = 'varying float vOutlineDistance; uniform vec3 outlineFarColor;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace('#include <output_fragment>',
+        'float outlineDistanceMix=smoothstep(35.,260.,vOutlineDistance);\nvec3 outlineColor=mix(vec3(0.0),outlineFarColor,outlineDistanceMix);\n diffuseColor.rgb=outlineColor;\n#include <output_fragment>');
     };
     material.customProgramCacheKey = () => 'panda-cartoon-ink-v1';
     const shell = source.isSkinnedMesh ? new T.SkinnedMesh(geometry, material) : new T.Mesh(geometry, material);

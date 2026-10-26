@@ -70,27 +70,29 @@ export function objectInkMaterial(source, width = 1) {
     source.onBeforeCompile.call(source, shader, renderer);
     shader.uniforms.objectInkWidth = { value: width };
     shader.uniforms.objectInkColor = { value: new T.Color(0x000000) };
+    shader.uniforms.objectInkFarColor = { value: new T.Color(0x454b50) };
     shader.vertexShader = 'attribute vec3 inkEdge; varying vec3 vInkEdge; varying float vInkDistance;\n' + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nvInkEdge = inkEdge;');
     shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvInkDistance=max(0.,-mvPosition.z);');
-    shader.fragmentShader = 'varying vec3 vInkEdge; varying float vInkDistance; uniform float objectInkWidth; uniform vec3 objectInkColor;\n' + shader.fragmentShader;
+    shader.fragmentShader = 'varying vec3 vInkEdge; varying float vInkDistance; uniform float objectInkWidth; uniform vec3 objectInkColor,objectInkFarColor;\n' + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
       vec3 inkDx = dFdx(vInkEdge), inkDy = dFdy(vInkEdge);
       vec3 inkSlope = sqrt(inkDx * inkDx + inkDy * inkDy);
       vec3 inkPixels = vInkEdge / max(inkSlope, vec3(0.000001));
       float inkDistanceMix = smoothstep(35.,260.,vInkDistance);
-      float inkWidth = objectInkWidth * mix(1.,.45,inkDistanceMix);
+      float inkWidth = objectInkWidth;
       vec3 inkCoverage = 1.0 - smoothstep(vec3(inkWidth - 0.5), vec3(inkWidth + 0.5), inkPixels);
       // Subpixel details fade at a distance instead of turning into black
       // triangles or sparkling in the planet overview / mobile portrait view.
       inkCoverage *= 1.0 - smoothstep(vec3(0.16), vec3(0.48), inkSlope);
       float ink = max(inkCoverage.x, max(inkCoverage.y, inkCoverage.z));
-      outgoingLight = mix(outgoingLight, objectInkColor, ink * 0.88 * mix(1.,.28,inkDistanceMix));
+      vec3 inkColor=mix(objectInkColor,objectInkFarColor,inkDistanceMix);
+      outgoingLight = mix(outgoingLight, inkColor, ink * 0.88);
       #include <opaque_fragment>`);
   };
   const sourceKey = source.customProgramCacheKey();
-  material.customProgramCacheKey = () => sourceKey + '|surface-ink-distance-v2';
+  material.customProgramCacheKey = () => sourceKey + '|surface-ink-distance-v3';
   variants.set(width, material);
   return material;
 }

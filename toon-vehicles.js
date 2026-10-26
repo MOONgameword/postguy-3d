@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {decodeJapanAssets,japanMaterials} from './japan-assets.js?v=20261023-japan-v1';
-import {bakeObjectInk,objectInkMaterial} from './object-ink.js?v=20261026-distance-v1';
+import {bakeObjectInk,objectInkMaterial} from './object-ink.js?v=20261026-far-gray-v1';
 
 export function createToonVehicleFleet(bytes,manifest,atlas) {
   const variants=decodeJapanAssets(bytes,manifest);

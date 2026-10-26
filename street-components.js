@@ -154,23 +154,10 @@ export function installStreetComponents(city, source, {
 
   // Crosswalks stay painted, but no pedestrian or horizontal signals are installed.
 
-  // Small deterministic counts keep the authored street kit visible without
-  // recreating the old dense sidewalk clutter. Wider barriers/planters get a
-  // tangent offset so their footprint stays inside the paving band.
-  const counts = { '05': 4, '06': 4, '07': 4,
-    '08': 4, '09': 8, '10': 4, '11': 4, '12': 4, '13': 8, '14': 10 };
-  // Preserve every other kit placement after retiring the four old utility poles.
-  let seed = 18;
-  for (const id of Object.keys(counts)) {
-    for (const index of spreadIndices(anchors.length, counts[id], seed)) {
-      const frame = anchors[index];
-      const sign = (index + Number(id)) % 2 ? 1 : -1;
-      const offset = ['05', '06', '07', '08'].includes(id) ? sign * 3.4 : sign * 1.8;
-      add(id, frame, offset, id === '14' ? .9 : 1);
-    }
-    seed += 11;
-  }
+  // Keep only the road-facing lamps. The small sidewalk props (barriers,
+  // planters, bins, mailboxes, cabinets, hydrants and manhole assets) make the
+  // narrow pavement look cluttered and are intentionally retired.
   source.visible = false;
-  root.userData.streetComponentStats = { lampAnchors: anchors.length, placed: placed.length, componentTypes: 11 };
+  root.userData.streetComponentStats = { lampAnchors: anchors.length, placed: placed.length, componentTypes: 1, removedSidewalkProps: true };
   return root.userData.streetComponentStats;
 }
