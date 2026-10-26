@@ -8,6 +8,9 @@ export function verifyPandaGame(c){
  tick(30);check('持续向前自动奔跑',foot.autoRun&&boy.cur==='run',boy.cur);
  keys.ShiftLeft=true;tick(90);check('跑步动画',boy.cur==='run',boy.cur);keys.KeyW=false;keys.ShiftLeft=false;tick(90);
  check('松开退出自动奔跑',!foot.autoRun);
+ c.updateCamera(1/60);const headingBefore=c.camera.getWorldDirection(new T.Vector3());
+ keys.KeyD=true;tick(45);keys.KeyD=false;tick(60);c.updateCamera(1/60);c.camera.updateMatrixWorld(true);
+ check('左右移动带动镜头转向',headingBefore.angleTo(c.camera.getWorldDirection(new T.Vector3()))>.3);
  keys.KeyS=true;tick(90);keys.KeyS=false;tick(60);
  const up=new T.Vector3(0,1,0).applyQuaternion(foot.q),facing=new T.Vector3(0,0,1).applyQuaternion(foot.q);
  const towardCamera=c.camera.position.clone().sub(walker.position);towardCamera.addScaledVector(up,-towardCamera.dot(up)).normalize();

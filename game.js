@@ -23,7 +23,7 @@ import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanT
 import { installJapanDressing } from './japan-dressing.js?v=20261023-mask-v1';
 import { installStreetComponents } from './street-components.js?v=20261026-no-sidewalk-props-v1';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
-import { updateAutoRun, installTapJump } from './player-controls.js?v=20261026-controls-v1';
+import { updateAutoRun, installTapJump, walkOrbitDelta, installCameraDrag } from './player-controls.js?v=20261026-orbit-v2';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261026-far-gray-v1';
 import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261026-far-gray-v1';
@@ -1435,7 +1435,7 @@ function dismount() {
   foot.q.copy(_dmQ);
   foot.h = 0;
   foot.gr = state.gr;                  // Preserve the deck level when dismounting.
-  foot.camOff = 0;
+  foot.camOff = state.camOff;
   foot.forwardTime = 0; foot.autoRun = false;
   foot.speed = 0; foot.vy = 0; foot.air = false; foot.swimming = false;
   syncBody(walker, foot.q, 0, foot, 1);
@@ -1451,6 +1451,7 @@ function mount() {
   if (foot.swimming) { toast('先游回岸边再上车'); return; }
   if (walker.position.distanceTo(player.position) > CFG.mountRange) { toast('走到电动车旁再上车'); return; }
   state.onBike = true;
+  state.camOff = foot.camOff;
   foot.forwardTime = 0; foot.autoRun = false; jumpQueued = false;
   walker.visible = false;
   riderHolder.add(boy.pivot);
@@ -1560,9 +1561,9 @@ addEventListener('keydown', e => { keys[e.code] = true; });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
 $('hint').textContent = IS_MOBILE
-  ? '左侧拖动移动 · 下车持续向前自动跑 · 轻点空白处跳'
-  : 'W/S 移动 · A/D 转向 · F 上下车 · 持续向前自动跑 · 空格/轻点空白处跳';
-if (IS_MOBILE) document.querySelector('.intro-help').textContent = '左侧拖动移动 · 下车持续向前自动跑 · 轻点空白处跳';
+  ? '左侧移动 · 右侧拖动镜头 · 持续向前跑 · 轻点跳'
+  : 'WASD 移动 · 右侧拖动/鼠标右键转镜头 · F 上下车 · 空格跳';
+if (IS_MOBILE) document.querySelector('.intro-help').textContent = '左侧移动 · 右侧拖动镜头 · 持续向前跑 · 轻点跳';
 addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 addEventListener('gesturestart', e => e.preventDefault());
 addEventListener('contextmenu', e => e.preventDefault());
@@ -1576,6 +1577,14 @@ const joystick = installFloatingStick({stage:$('stage'),canvas,stick,knob,
 const stickVec = joystick.vector;
 
 let gasOn = false, brakeOn = false, jumpQueued = false;
+let cameraPitch = 0;
+const cameraDrag=installCameraDrag({stage:$('stage'),canvas,
+  enabled:() => !introPreview && !scenicView && !$('mask').classList.contains('on'),
+  rotate:(yaw,pitch) => {
+    const actor=state.onBike?state:foot;
+    actor.camOff=THREE.MathUtils.euclideanModulo(actor.camOff+yaw+Math.PI,Math.PI*2)-Math.PI;
+    cameraPitch=clamp(cameraPitch+pitch,-.22,.65);
+  }});
 installTapJump({stage:$('stage'),
   acceptsTarget:target => target === canvas || target === $('stage') || stick.contains(target),
   enabled:() => !state.onBike && !foot.swimming && !introPreview && !scenicView && !$('mask').classList.contains('on'),
@@ -1583,6 +1592,7 @@ installTapJump({stage:$('stage'),
 function resetMovement() {
   for (const key of Object.keys(keys)) delete keys[key];
   joystick.reset();
+  cameraDrag.reset();
   gasOn = false; brakeOn = false;
   foot.forwardTime = 0; foot.autoRun = false; jumpQueued = false;
 }
@@ -1649,7 +1659,7 @@ for (const id of ['mini', 'mapLocation']) {
     if (!e.repeat) toggleView();
   });
 }
-$('btnGear').onclick = () => toast(IS_MOBILE ? '地图切换远眺 · 下车持续向前自动跑 · 轻点空白处跳' : '地图/V 远眺 · 下车持续向前自动跑 · 空格/轻点空白处跳');
+$('btnGear').onclick = () => toast(IS_MOBILE ? '左侧移动 · 右侧拖动镜头 · 轻点跳跃 · 地图远眺' : '右侧拖动/鼠标右键转镜头 · 持续向前跑 · 空格跳 · V 远眺');
 $('btnQuiet').onclick = () => {
   joystick.reset();
   const quiet = document.body.classList.toggle('quiet');
@@ -1913,6 +1923,8 @@ function updateFoot(dt) {
 
   let mag = Math.min(1, moveDir.length());
   const forward = -stickVec.y + Number(!!(keys.KeyW || keys.ArrowUp)) - Number(!!(keys.KeyS || keys.ArrowDown));
+  const horizontal = stickVec.x + Number(!!(keys.KeyD || keys.ArrowRight)) - Number(!!(keys.KeyA || keys.ArrowLeft));
+  const orbitStep = cameraDrag.active ? 0 : walkOrbitDelta(horizontal,forward,dt);
   const autoRun = updateAutoRun(foot, dt, forward, mag > .08, foot.swimming);
   const running = autoRun || gasOn || keys.ShiftLeft || keys.ShiftRight;
   if (mag > 0.08) {
@@ -1942,6 +1954,7 @@ function updateFoot(dt) {
 
   if (!slide(foot.q, _ftQ, foot.speed * dt, CFG.footRadius, true)) foot.speed *= 0.3;
   foot.q.copy(_ftQ);
+  foot.camOff += orbitStep;
   fUp(foot.q, _ftU);
   const inWater = isLakeWater(_lakeWorld.copy(_ftU).multiplyScalar(600).add(PLANET.C));
   const swimming = inWater && waterSurfaceR(_ftU) - groundR(_ftU) > (foot.swimming ? .58 : .68) * S;
@@ -1997,11 +2010,9 @@ function updateCamera(dt) {
   const q = focusFrame();
   const p = focusPos();
 
-  /* Bike follows steering immediately. Walking keeps its heading, so reversing shows the face. */
+  /* Orbit responds only to current input; no delayed recentering after release. */
   camQ.copy(q);
-  if (!state.onBike) {
-    turn(camQ, foot.camOff);
-  }
+  turn(camQ, state.onBike ? state.camOff : foot.camOff);
   fUp(camQ, _cUp);
   fFwd(camQ, _cDir);
   /* 必须同步 up：否则 lookAt 拿世界 +Y 当上方，跑到星球另一面镜头就倒过来了 */
@@ -2041,7 +2052,7 @@ function updateCamera(dt) {
   const back = cameraDistance(base);
   // Bike camera sits a little closer and lower, aimed slightly higher, so the
   // view is flatter (~23° down instead of ~29°) and more of the street frontage shows.
-  const high = (state.onBike ? 3.1 : 3.0) * S;
+  const high = (state.onBike ? 3.1 : 3.0) * S + back * cameraPitch;
   camGoal.copy(p).addScaledVector(_cDir, -back).addScaledVector(_cUp, high + back * (state.onBike ? 0.18 : 0.22));
   lookGoal.copy(p).addScaledVector(_cDir, (state.onBike ? -0.8 : 4.2) * S).addScaledVector(_cUp, (state.onBike ? 1.5 : 1.1) * S);
   camera.position.copy(camGoal);
