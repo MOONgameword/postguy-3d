@@ -26,7 +26,7 @@ export function addCharacterOutline(root, width = .018) {
     source.getWorldScale(scale);
     const localWidth = width / Math.max(.00001, Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
     const material = new T.MeshBasicMaterial({
-      name: 'PandaCartoonInk', color: 0x302219, side: T.BackSide, toneMapped: false, fog: true,
+      name: 'PandaCartoonInk', color: 0x000000, side: T.BackSide, toneMapped: false, fog: true,
     });
     material.onBeforeCompile = shader => {
       shader.uniforms.outlineWidth = { value: localWidth };

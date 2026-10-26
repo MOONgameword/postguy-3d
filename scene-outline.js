@@ -15,7 +15,7 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
   const uniforms={
     colorMap:{value:target.texture},depthMap:{value:target.depthTexture},
     texel:{value:new T.Vector2(1,1)},nearFar:{value:new T.Vector2()},
-    width:{value:1.15},ink:{value:new T.Color('#28363b')},
+    width:{value:1.15},ink:{value:new T.Color('#000000')},
     fogRange:{value:new T.Vector2(250,600)},overview:{value:0},
   };
   const material=new T.ShaderMaterial({
@@ -38,6 +38,13 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
         vec2 dx=vec2(texel.x*width,0.),dy=vec2(0.,texel.y*width);
         float l=distanceAt(vUv-dx),r=distanceAt(vUv+dx),b=distanceAt(vUv-dy),t=distanceAt(vUv+dy);
         float nearest=min(c,min(min(l,r),min(b,t)));
+        // Probe the nearest surface first, including the outside of silhouettes.
+        // Then narrow the sampling footprint with distance on both sides of an edge.
+        float distanceMix=smoothstep(mix(35.,250.,overview),mix(260.,1600.,overview),nearest);
+        float widthScale=mix(1.18,.45,distanceMix);
+        dx*=widthScale;dy*=widthScale;
+        l=distanceAt(vUv-dx);r=distanceAt(vUv+dx);
+        b=distanceAt(vUv-dy);t=distanceAt(vUv+dy);
         // Second depth difference highlights silhouettes while cancelling
         // smooth slopes, avoiding ink over every ground pixel.
         float crease=max(abs(l+r-2.*c),abs(b+t-2.*c));
@@ -48,7 +55,7 @@ export function createSceneOutline(renderer,{mobile=false}={}) {
         float allowed=min(base.a,min(min(texture2D(colorMap,vUv-dx).a,texture2D(colorMap,vUv+dx).a),min(texture2D(colorMap,vUv-dy).a,texture2D(colorMap,vUv+dy).a)));
         edge*=smoothstep(.5,.98,allowed);
         float fade=1.-smoothstep(fogRange.x,fogRange.y,nearest);
-        edge*=mix(fade,.22,overview);
+        edge*=mix(1.,.28,distanceMix)*mix(fade,.22,overview);
         gl_FragColor=base;
         #include <tonemapping_fragment>
         // The authored sky is unlit and was already intentionally toneMapped=false.

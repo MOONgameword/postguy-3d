@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createSceneOutline} from './scene-outline.js?v=20261023-mask-v1';
+import {createSceneOutline} from './scene-outline.js?v=20261026-distance-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
@@ -7,7 +7,7 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261023-foliage-mask-v1';
 import { installNprShading } from './npr-shading.js?v=20261022-01';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
-import { createToonVehicleFleet } from './toon-vehicles.js?v=20261023-cars-v1';
+import { createToonVehicleFleet } from './toon-vehicles.js?v=20261026-distance-v1';
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-frontage';
 import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20261021-norock';
@@ -24,8 +24,8 @@ import { installJapanDressing } from './japan-dressing.js?v=20261023-mask-v1';
 import { installStreetComponents } from './street-components.js?v=20261023-street-cleanup-v1';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
-import { addCharacterOutline } from './character-outline.js?v=20261012-01';
-import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261013-02';
+import { addCharacterOutline } from './character-outline.js?v=20261026-distance-v1';
+import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261026-distance-v1';
 
 let meadowPlants = null;
 let streetDressing = null;
@@ -212,7 +212,7 @@ function toonify(root, opts = {}) {
 const OUTLINE = /(?:\?|&)outline(?:&|$)/.test(location.search);
 const OBJECT_INK = /(?:\?|&)line(?:&|$)/.test(location.search);
 const OUTLINE_MUL = parseFloat((location.search.match(/[?&]lw=([\d.]+)/) || [])[1]) || 1;
-const OUTLINE_COLOR = 0x2b2622;
+const OUTLINE_COLOR = 0x000000;
 const outlineMats = new Map();
 function outlineMaterial(thickness) {
   const w = Math.max(0.0004, thickness);
