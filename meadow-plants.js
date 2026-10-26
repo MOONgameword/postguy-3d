@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {excludeBlendedGrass,excludeFromOutline} from './outline-mask.js?v=20261027-v1';
+import {excludeBlendedGrass,excludeFromOutline} from './outline-mask.js?v=20261027-v2';
 import { lakeMetric } from './lakeside.js?v=20261027-water-mask-v1';
 import { TURF_GLSL } from './surface-materials.js?v=20261021-granite';
 

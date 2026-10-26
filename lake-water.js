@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from './vendor/utils/BufferGeometryUtils.js';
-import {excludeFromOutline} from './outline-mask.js?v=20261027-v1';
+import {excludeFromOutline} from './outline-mask.js?v=20261027-v2';
 
 // Shared, inexpensive materials: sand and submerged plants draw before the
 // transparent water; the foam pass is drawn last. No screen-size render targets.
