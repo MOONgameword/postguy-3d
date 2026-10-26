@@ -5,7 +5,7 @@ import * as THREE from 'three';
 // SKY_SUN is where the sun sits in that image (measured centroid); the panorama
 // is spun every frame so its painted sun lines up with the DirectionalLight, and
 // the light's elevation matches the painted sun's height (≈23°).
-const SKY_URL = './assets/sky-cyan-original.png?v=20261023';
+const SKY_URL = './assets/sky-cyan-original.png?v=20261026-sky-v2';
 const SKY_SUN_U = 801 / 3840;
 const SKY_SUN_ANGLE = (0.5 - 713 / 1920) * Math.PI;
 const SKY_SUN_ELEVATION = 0.92 * Math.tan(SKY_SUN_ANGLE);

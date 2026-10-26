@@ -4,7 +4,7 @@ import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261023-foliage-mask-v1';
+import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261026-sky-v2';
 import { installNprShading } from './npr-shading.js?v=20261022-01';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
 import { createToonVehicleFleet } from './toon-vehicles.js?v=20261026-distance-v1';
