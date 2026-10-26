@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from './vendor/utils/BufferGeometryUtils.js';
+import {excludeFromOutline} from './outline-mask.js?v=20261027-v1';
 
 // Shared, inexpensive materials: sand and submerged plants draw before the
 // transparent water; the foam pass is drawn last. No screen-size render targets.
@@ -62,6 +63,7 @@ export function installClearLake(root,{point,polar,bedRadius,frame,waterRadius,m
     diffuseColor.a=(.23+.13*(1.0-smoothstep(.55,1.0,q))+.24*fresnel)*(1.0-smoothstep(.985,1.002,q));
   `,`normal=normalize(normal+vec3(sin(lakeUv.x*.17+lakeTime*.7)*.055,cos(lakeUv.y*.15-lakeTime*.6)*.055,0.0));`);
   const water=meshSurface(Array.from({length:41},(_,i)=>i/40),()=>waterRadius,waterMat,'LakeWater');water.renderOrder=3;
+  excludeFromOutline(waterMat);
   const foamMat=shaderMaterial(new T.MeshBasicMaterial({color:0xfff9e9,transparent:true,depthWrite:false,side:T.DoubleSide}),'clear-lake-foam-v1',`
     float q=lakeQ(lakeUv),noise=lakeNoise(lakeUv*.30),coast=lakeNoise(lakeUv*.055);
     float phase=fract(lakeTime*.105+coast*.30);
@@ -71,6 +73,7 @@ export function installClearLake(root,{point,polar,bedRadius,frame,waterRadius,m
     diffuseColor.a=max(fringe*.78,wash*.60)*(.5+.5*noise)*smoothstep(.15,.55,coast+noise*.3);
   `);
   const foam=meshSurface([.935,.955,.975,.99,1.003],()=>waterRadius+.065,foamMat,'LakeFoam');foam.renderOrder=4;
+  excludeFromOutline(foamMat);
   let seed=893;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   const batches=new Map(),positions=[];
   function batch(g,mat,matrix){g.applyMatrix4(matrix);if(!batches.has(mat))batches.set(mat,[]);batches.get(mat).push(g.index?g.toNonIndexed():g);}
@@ -79,7 +82,9 @@ export function installClearLake(root,{point,polar,bedRadius,frame,waterRadius,m
     shader.uniforms.lakeTime=time;shader.vertexShader='uniform float lakeTime;\nattribute float sway;\n'+shader.vertexShader;
     shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvec3 up=normalize(position);vec3 tangent=normalize(cross(up,vec3(.31,.79,.21)));transformed+=tangent*sin(lakeTime*1.1+position.x*.21+position.z*.14)*sway*.32;');
   };grassMat.customProgramCacheKey=()=> 'lake-seagrass-v1';
+  excludeFromOutline(grassMat);
   const coralMats=['#bc8874','#b99c64','#9d8baa','#799e8c'].map(color=>new T.MeshLambertMaterial({color}));
+  coralMats.forEach(excludeFromOutline);
   let grassClumps=0,corals=0;
   for(let i=0;i<210;i++){
     const angle=random()*Math.PI*2,q=.28+Math.sqrt(random())*.60,[x,z]=polar(angle,q),base=bedRadius(q)+.20;

@@ -1,6 +1,6 @@
 import * as T from 'three';
-import {excludeBlendedGrass} from './outline-mask.js?v=20261023-v1';
-import { lakeMetric } from './lakeside.js?v=20261021-norock';
+import {excludeBlendedGrass,excludeFromOutline} from './outline-mask.js?v=20261027-v1';
+import { lakeMetric } from './lakeside.js?v=20261027-water-mask-v1';
 import { TURF_GLSL } from './surface-materials.js?v=20261021-granite';
 
 export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
@@ -188,6 +188,8 @@ export function createMeadowPlants(scene, field, { mobile = false, model = creat
   const farGrass = model?.farGeometry ? new T.InstancedMesh(model.farGeometry, grassMaterial, farCapacity) : null;
   const stems = new T.InstancedMesh(stemGeometry(), material(), Math.ceil(capacity * .14));
   const blooms = new T.InstancedMesh(new T.CircleGeometry(.30, 12), material(true), stems.instanceMatrix.count);
+  excludeFromOutline(stems.material);
+  excludeFromOutline(blooms.material);
   const renderMeshes = [[grass, 'MeadowBlades'], ...(farGrass ? [[farGrass, 'MeadowFarBlades']] : []), [stems, 'MeadowStems'], [blooms, 'MeadowRoundFlowers']];
   for (const [mesh, name] of renderMeshes) {
     mesh.name = name; mesh.count = 0; mesh.frustumCulled = false;

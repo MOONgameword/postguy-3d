@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { mergeGeometries } from './vendor/utils/BufferGeometryUtils.js';
-import {installClearLake} from './lake-water.js?v=20260930-22';
+import {installClearLake} from './lake-water.js?v=20261027-water-mask-v1';
+import {excludeFromOutline} from './outline-mask.js?v=20261027-v1';
 
 // The wooded basin behind Bld_0333, identified against the user's marked view.
 const oldUp = new T.Vector3(-365,405,-330).normalize();
@@ -56,6 +57,7 @@ export function createLakeside(city, { includeReeds = false } = {}){
 
   const root=new T.Group();root.name='Lakeside';city.add(root);
   const materials={sand:new T.MeshLambertMaterial({color:0xc7bb92,side:T.DoubleSide}),wood:new T.MeshLambertMaterial({color:0x947050}),lightWood:new T.MeshLambertMaterial({color:0xb19166}),darkWood:new T.MeshLambertMaterial({color:0x665d48}),reed:new T.MeshLambertMaterial({color:0x758654,side:T.DoubleSide}),reedLight:new T.MeshLambertMaterial({color:0xa4aa6e,side:T.DoubleSide}),cattail:new T.MeshLambertMaterial({color:0x70533d}),stone:new T.MeshLambertMaterial({color:0x999f8c}),cream:new T.MeshLambertMaterial({color:0xf0e2b9,side:T.DoubleSide}),red:new T.MeshLambertMaterial({color:0xb66548}),green:new T.MeshLambertMaterial({color:0x4b7872})};
+  [materials.reed,materials.reedLight,materials.cattail].forEach(excludeFromOutline);
   const batches=new Map();
   function batch(geo,mat,matrix){if(matrix)geo.applyMatrix4(matrix);if(!batches.has(mat))batches.set(mat,[]);batches.get(mat).push(geo.index?geo.toNonIndexed():geo);}
   function frame(x,z,radius=WATER){const p=lakePoint(x,z,radius),up=p.clone().normalize(),east=X.clone().addScaledVector(up,-X.dot(up)).normalize(),south=new T.Vector3().crossVectors(east,up);return new T.Matrix4().makeBasis(east,up,south).setPosition(p);}

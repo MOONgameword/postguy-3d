@@ -41,3 +41,15 @@ export function excludeBlendedGrass(material){
   material.blendEquationAlpha=T.AddEquation;
   material.blendSrcAlpha=T.ZeroFactor;material.blendDstAlpha=T.ZeroFactor;
 }
+
+export function excludeFromOutline(material){
+  if(material.userData.outlineExcluded)return;
+  material.userData.outlineExcluded=true;
+  const compile=material.onBeforeCompile,key=material.customProgramCacheKey();
+  material.onBeforeCompile=function(shader,renderer){
+    compile?.call(this,shader,renderer);
+    shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\ngl_FragColor.a=0.;');
+  };
+  material.customProgramCacheKey=()=>key+'-outline-excluded-v1';
+  material.needsUpdate=true;
+}
