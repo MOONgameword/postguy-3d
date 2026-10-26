@@ -10,7 +10,7 @@ import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } fro
 import { createToonVehicleFleet } from './toon-vehicles.js?v=20261026-distance-v1';
 import { createTrafficLanes } from './traffic-lanes.js?v=20261013-01';
 import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-frontage';
-import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20261027-water-mask-v1';
+import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20261027-water-mask-v2';
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261021-walkable';
@@ -18,7 +18,7 @@ import { installSurfaceMaterials } from './surface-materials.js?v=20261021-grani
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
 import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
 import { installSoftTerrain, smoothTerrainNormals } from './soft-terrain.js?v=20260929-11';
-import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261027-water-mask-v1';
+import { scatterMeadow, createMeadowPlants, createGrassCards, GRASS_TEXTURE_URL } from './meadow-plants.js?v=20261027-water-mask-v2';
 import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanTrees } from './japan-assets.js?v=20261023-mask-v1';
 import { installJapanDressing } from './japan-dressing.js?v=20261023-mask-v1';
 import { installStreetComponents } from './street-components.js?v=20261026-no-sidewalk-props-v1';

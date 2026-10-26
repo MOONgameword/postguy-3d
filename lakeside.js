@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { mergeGeometries } from './vendor/utils/BufferGeometryUtils.js';
-import {installClearLake} from './lake-water.js?v=20261027-water-mask-v1';
+import {installClearLake} from './lake-water.js?v=20261027-water-mask-v2';
 import {excludeFromOutline} from './outline-mask.js?v=20261027-v2';
 
 // The wooded basin behind Bld_0333, identified against the user's marked view.

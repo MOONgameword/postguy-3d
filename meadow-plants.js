@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {excludeBlendedGrass,excludeFromOutline} from './outline-mask.js?v=20261027-v2';
-import { lakeMetric } from './lakeside.js?v=20261027-water-mask-v1';
+import { lakeMetric } from './lakeside.js?v=20261027-water-mask-v2';
 import { TURF_GLSL } from './surface-materials.js?v=20261021-granite';
 
 export const GRASS_TEXTURE_URL = './assets/trees/grass-cards-v1-512.png';
