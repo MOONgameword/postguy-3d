@@ -45,6 +45,16 @@ export function excludeBlendedGrass(material){
 export function excludeFromOutline(material){
   if(material.userData.outlineExcluded)return;
   material.userData.outlineExcluded=true;
+  // Preserve the material's visible RGB blending while reserving alpha only
+  // for the post-process eligibility mask. This is required for transparent
+  // water and foam: setting output alpha to zero must not hide their colour.
+  material.blending=T.CustomBlending;
+  material.blendEquation=T.AddEquation;
+  material.blendSrc=T.SrcAlphaFactor;
+  material.blendDst=T.OneMinusSrcAlphaFactor;
+  material.blendEquationAlpha=T.AddEquation;
+  material.blendSrcAlpha=T.ZeroFactor;
+  material.blendDstAlpha=T.ZeroFactor;
   const compile=material.onBeforeCompile,key=material.customProgramCacheKey();
   material.onBeforeCompile=function(shader,renderer){
     compile?.call(this,shader,renderer);
