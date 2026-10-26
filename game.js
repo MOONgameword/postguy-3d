@@ -23,6 +23,7 @@ import { decodeJapanAssets, japanMaterials, installJapanBuildings, installJapanT
 import { installJapanDressing } from './japan-dressing.js?v=20261023-mask-v1';
 import { installStreetComponents } from './street-components.js?v=20261026-no-sidewalk-props-v1';
 import { installFloatingStick } from './floating-stick.js?v=20260929-16';
+import { updateAutoRun, installTapJump } from './player-controls.js?v=20261026-controls-v1';
 import { overviewDistance, updatePlanetClipping } from './planet-camera.js?v=20261008-08';
 import { addCharacterOutline } from './character-outline.js?v=20261026-far-gray-v1';
 import { applyObjectInk, bakeObjectInk } from './object-ink.js?v=20261026-far-gray-v1';
@@ -1388,7 +1389,7 @@ const walkerRig = new THREE.Group();
 walkerRig.rotation.y = -Math.PI / 2;
 walker.add(walkerRig);
 
-const foot = { speed: 0, vy: 0, air: false, swimming: false, h: 0, q: new THREE.Quaternion(), camOff: 0 };
+const foot = { speed: 0, vy: 0, air: false, swimming: false, h: 0, q: new THREE.Quaternion(), camOff: 0, forwardTime: 0, autoRun: false };
 
 /* ---------- 骨骼动画 ---------- */
 const boy = { pivot: null, mixer: null, actions: {}, cur: '', seat: new THREE.Vector3() };
@@ -1435,13 +1436,14 @@ function dismount() {
   foot.h = 0;
   foot.gr = state.gr;                  // Preserve the deck level when dismounting.
   foot.camOff = 0;
+  foot.forwardTime = 0; foot.autoRun = false;
   foot.speed = 0; foot.vy = 0; foot.air = false; foot.swimming = false;
   syncBody(walker, foot.q, 0, foot, 1);
   walker.visible = true;
   // Preserve the previous action so playAnim can fade the riding pose out.
   playAnim('idle', { fade: 0.12 });
   setRideBtn();
-  toast('下车 · 摇杆走，油门跑，刹车跳');
+  toast('下车 · 持续向前自动跑，轻点空白处跳跃');
 }
 
 function mount() {
@@ -1449,6 +1451,7 @@ function mount() {
   if (foot.swimming) { toast('先游回岸边再上车'); return; }
   if (walker.position.distanceTo(player.position) > CFG.mountRange) { toast('走到电动车旁再上车'); return; }
   state.onBike = true;
+  foot.forwardTime = 0; foot.autoRun = false; jumpQueued = false;
   walker.visible = false;
   riderHolder.add(boy.pivot);
   boy.pivot.position.copy(boy.seat);
@@ -1494,6 +1497,13 @@ function addXp(n) {
 const pickupMarker = makeMarker(0xff5a4a, '📮');
 const dropMarker = makeMarker(0x38c76a, '🏠');
 dropMarker.visible = false;
+let taskNoticeTimer = 0;
+function showTaskNotice() {
+  const bar = document.querySelector('.taskbar');
+  clearTimeout(taskNoticeTimer);
+  bar.hidden = introPreview;
+  if (!introPreview && state.phase === 'pickup') taskNoticeTimer = setTimeout(() => { bar.hidden = true; }, 4000);
+}
 
 function nextTask() {
   if (state.phase === 'pickup') {
@@ -1522,6 +1532,7 @@ function nextTask() {
     $('taskDesc').textContent = '把信送到绿色光柱的住户';
     $('taskIcon').textContent = '✉️';
   }
+  showTaskNotice();
 }
 
 function reachTarget() {
@@ -1549,9 +1560,9 @@ addEventListener('keydown', e => { keys[e.code] = true; });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
 $('hint').textContent = IS_MOBILE
-  ? '左侧空白处按住拖动 · 油门/刹车 · 下车步行'
-  : 'W/S 油门刹车 · A/D 转向 · F 上下车 · 步行时 Shift 跑 / 空格跳';
-if (IS_MOBILE) document.querySelector('.intro-help').textContent = '左侧空白处按住拖动 · 右侧油门与刹车 · 下车步行';
+  ? '左侧拖动移动 · 下车持续向前自动跑 · 轻点空白处跳'
+  : 'W/S 移动 · A/D 转向 · F 上下车 · 持续向前自动跑 · 空格/轻点空白处跳';
+if (IS_MOBILE) document.querySelector('.intro-help').textContent = '左侧拖动移动 · 下车持续向前自动跑 · 轻点空白处跳';
 addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 addEventListener('gesturestart', e => e.preventDefault());
 addEventListener('contextmenu', e => e.preventDefault());
@@ -1565,6 +1576,18 @@ const joystick = installFloatingStick({stage:$('stage'),canvas,stick,knob,
 const stickVec = joystick.vector;
 
 let gasOn = false, brakeOn = false, jumpQueued = false;
+installTapJump({stage:$('stage'),
+  acceptsTarget:target => target === canvas || target === $('stage') || stick.contains(target),
+  enabled:() => !state.onBike && !foot.swimming && !introPreview && !scenicView && !$('mask').classList.contains('on'),
+  jump:() => { jumpQueued = true; }});
+function resetMovement() {
+  for (const key of Object.keys(keys)) delete keys[key];
+  joystick.reset();
+  gasOn = false; brakeOn = false;
+  foot.forwardTime = 0; foot.autoRun = false; jumpQueued = false;
+}
+addEventListener('blur',resetMovement);
+document.addEventListener('visibilitychange',() => { if (document.hidden) resetMovement(); });
 function hold(el, set) {
   let pointer = null;
   const off = () => { const old = pointer; pointer = null; set(false); if (old !== null && el.hasPointerCapture(old)) el.releasePointerCapture(old); };
@@ -1593,7 +1616,7 @@ const PANELS = {
   shop: ['🛒 商店', [['🛵', '车辆改装'], ['⚡', '电量+'], ['🎽', '皮肤'], ['🧰', '扩容'], ['🔔', '喇叭'], ['💡', '车灯']]]
 };
 document.querySelectorAll('.bbtn').forEach(b => b.addEventListener('click', () => {
-  joystick.reset();
+  resetMovement();
   const [title, cells] = PANELS[b.dataset.panel];
   $('pTitle').textContent = title;
   $('pList').innerHTML = cells.map(([e, t]) => `<div class="cell"><em>${e}</em>${t}</div>`).join('');
@@ -1614,7 +1637,7 @@ function syncMapView() {
 }
 function toggleView() {
   scenicView = !scenicView;
-  joystick.reset();
+  resetMovement();
   syncMapView();
 }
 for (const id of ['mini', 'mapLocation']) {
@@ -1626,7 +1649,7 @@ for (const id of ['mini', 'mapLocation']) {
     if (!e.repeat) toggleView();
   });
 }
-$('btnGear').onclick = () => toast(IS_MOBILE ? '点击右上角地图切换远眺 · 左侧拖动移动 · 右侧油门/刹车' : '点击地图或按 V 切换远眺 · H 收起界面');
+$('btnGear').onclick = () => toast(IS_MOBILE ? '地图切换远眺 · 下车持续向前自动跑 · 轻点空白处跳' : '地图/V 远眺 · 下车持续向前自动跑 · 空格/轻点空白处跳');
 $('btnQuiet').onclick = () => {
   joystick.reset();
   const quiet = document.body.classList.toggle('quiet');
@@ -1888,8 +1911,10 @@ function updateFoot(dt) {
     else moveDir.add(camF);
   }
 
-  const running = gasOn || keys.ShiftLeft || keys.ShiftRight;
   let mag = Math.min(1, moveDir.length());
+  const forward = -stickVec.y + Number(!!(keys.KeyW || keys.ArrowUp)) - Number(!!(keys.KeyS || keys.ArrowDown));
+  const autoRun = updateAutoRun(foot, dt, forward, mag > .08, foot.swimming);
+  const running = autoRun || gasOn || keys.ShiftLeft || keys.ShiftRight;
   if (mag > 0.08) {
     moveDir.addScaledVector(_ftU, -moveDir.dot(_ftU)).normalize();
     const target = (foot.swimming ? (running ? 2.2 : 1.35) * S : running ? CFG.runSpeed : CFG.walkSpeed) * mag;
@@ -1898,7 +1923,7 @@ function updateFoot(dt) {
     const dh = Math.atan2(_ftC.crossVectors(_ftF, moveDir).dot(_ftU), _ftF.dot(moveDir));
     const step = dh * Math.min(1, dt * CFG.footTurn);
     turn(foot.q, step);
-    foot.camOff -= step;                              // 人转了镜头先不动，之后慢慢跟上
+    foot.camOff -= step; // Keep camera heading independent of facing, including walking toward the camera.
   } else {
     mag = 0;
     foot.speed += (0 - foot.speed) * Math.min(1, dt * 12);
@@ -1972,11 +1997,9 @@ function updateCamera(dt) {
   const q = focusFrame();
   const p = focusPos();
 
-  /* 骑车时镜头就在车正后方；步行时慢慢转回身后，避免和「相对镜头」操作互相带偏 */
+  /* Bike follows steering immediately. Walking keeps its heading, so reversing shows the face. */
   camQ.copy(q);
   if (!state.onBike) {
-    const rate = foot.speed > 0.3 * S ? 1.8 : 0.5;
-    foot.camOff += (0 - foot.camOff) * Math.min(1, dt * rate);
     turn(camQ, foot.camOff);
   }
   fUp(camQ, _cUp);
@@ -2021,7 +2044,7 @@ function updateCamera(dt) {
   const high = (state.onBike ? 3.1 : 3.0) * S;
   camGoal.copy(p).addScaledVector(_cDir, -back).addScaledVector(_cUp, high + back * (state.onBike ? 0.18 : 0.22));
   lookGoal.copy(p).addScaledVector(_cDir, (state.onBike ? -0.8 : 4.2) * S).addScaledVector(_cUp, (state.onBike ? 1.5 : 1.1) * S);
-  camera.position.lerp(camGoal, Math.min(1, dt * (state.onBike ? 6 : 7)));
+  camera.position.copy(camGoal);
   camera.lookAt(lookGoal);
 }
 
@@ -2607,6 +2630,7 @@ async function boot() {
     gate.classList.remove('on');
     document.body.classList.remove('welcome');
     introPreview = false;
+    showTaskNotice();
     resize();
     clock.getDelta();
   }, { once: true });

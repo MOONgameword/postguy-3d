@@ -4,8 +4,16 @@ export function verifyPandaGame(c){
  const check=(name,ok,detail='')=>{rows.push({name,pass:!!ok,detail});if(!ok)console.error('Panda check:',name,detail)};
  const tick=n=>{for(let i=0;i<n;i++){c.updateCamera(1/60);c.camera.updateMatrixWorld(true);c.updateFoot(1/60);boy.mixer.update(1/60)}};
  state.speed=0;c.dismount();keys.KeyW=false;keys.ShiftLeft=false;tick(60);check('站立动画',boy.cur==='idle',boy.cur);
- const start=walker.position.clone();keys.KeyW=true;tick(90);check('走路移动与动画',walker.position.distanceTo(start)>1&&boy.cur==='walk',boy.cur);
+ const start=walker.position.clone();keys.KeyW=true;tick(30);check('走路移动与动画',walker.position.distanceTo(start)>1&&boy.cur==='walk',boy.cur);
+ tick(30);check('持续向前自动奔跑',foot.autoRun&&boy.cur==='run',boy.cur);
  keys.ShiftLeft=true;tick(90);check('跑步动画',boy.cur==='run',boy.cur);keys.KeyW=false;keys.ShiftLeft=false;tick(90);
+ check('松开退出自动奔跑',!foot.autoRun);
+ keys.KeyS=true;tick(90);keys.KeyS=false;tick(60);
+ const up=new T.Vector3(0,1,0).applyQuaternion(foot.q),facing=new T.Vector3(0,0,1).applyQuaternion(foot.q);
+ const towardCamera=c.camera.position.clone().sub(walker.position);towardCamera.addScaledVector(up,-towardCamera.dot(up)).normalize();
+ check('后退能看到角色正面',facing.dot(towardCamera)>.98,`dot=${facing.dot(towardCamera).toFixed(3)}`);
+ c.updateCamera(1/60);const fixedCamera=c.camera.position.clone();c.updateCamera(1/60);
+ check('镜头无旋转惯性',fixedCamera.distanceTo(c.camera.position)<1e-7);
  c.queueJump();tick(5);check('原生跳跃动画',foot.air&&boy.cur==='jump',boy.cur);tick(120);check('落地恢复',!foot.air&&boy.cur==='idle',boy.cur);
  const shore=lakePoint(...lakePolar(0,1.04),602),deep=lakePoint(...lakePolar(0,.35),602);
  foot.q.copy(c.frameFromDir(shore.clone().normalize(),deep.clone().sub(shore)));foot.speed=0;foot.swimming=false;foot.air=false;foot.h=0;foot.vy=0;foot.gr=undefined;foot.camOff=0;c.syncBody(walker,foot.q,0,foot,1);c.updateCamera(1);c.camera.updateMatrixWorld(true);

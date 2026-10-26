@@ -255,7 +255,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
       <button class="gear" id="btnGear" aria-label="操作提示">☰</button>
     </div>
 
-    <div class="taskbar"><div class="taskicon" id="taskIcon">📮</div>
+    <div class="taskbar" hidden><div class="taskicon" id="taskIcon">📮</div>
       <div class="tasktxt"><b id="taskTitle">新的信件</b><span id="taskDesc">去红色邮箱领取下一封信</span></div>
       <div class="taskarrow">›</div></div>
 
@@ -313,6 +313,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   if (location.protocol === 'file:') show('请用本地服务器打开：\n在 postman-3d 目录运行 serve.ps1，\n然后访问 http://localhost:8130/');
 })();
 </script>
-<script type="module" src="./game.js?v=20261026-canopy-v1"></script>
+<style>.taskbar[hidden] { display:none !important; }</style>
+<script type="module" src="./game.js?v=20261026-controls-v1"></script>
 </body>
 </html>
