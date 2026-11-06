@@ -223,3 +223,8 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
 #btnRide img { width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none; }
 #btnRide:focus-visible { outline:2px solid #fff5d8; outline-offset:3px; }
+@media (orientation:portrait) {
+  /* Match the reference box; image padding is included in the larger hit area. */
+  #btnRide,.mobile-ui #btnRide { width:110px; height:110px; right:4%;
+    bottom:max(22.5%,env(safe-area-inset-bottom)); }
+}
