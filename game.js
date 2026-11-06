@@ -1508,12 +1508,12 @@ function showTaskNotice() {
 
 function nextTask() {
   if (state.phase === 'pickup') {
-    /* 取最近的那个（但别是刚刚站着的那个）：邮箱铺开三百米，随机挑会挑到最远的 */
+    /* 优先选至少 50 米外的最近邮箱，让连续任务留出骑行距离。 */
     const here = focusPos();
     let mb = null, bd = Infinity;
     for (const c of state.mailboxes) {
       const d = c.position.distanceTo(here);
-      if (d > 25 * S && d < bd) { bd = d; mb = c; }
+      if (d > 50 * S && d < bd) { bd = d; mb = c; }
     }
     if (!mb) mb = state.mailboxes[Math.floor(Math.random() * state.mailboxes.length)];
     state.target = mb.position.clone();
@@ -1524,7 +1524,7 @@ function nextTask() {
     $('taskDesc').textContent = '去红色邮箱领取下一封信';
     $('taskIcon').textContent = '📮';
   } else {
-    const q = findRoadFrame(2.5 * S, focusFrame(), 60 * S, true);
+    const q = findRoadFrame(2.5 * S, focusFrame(), 120 * S, true);
     state.targetQ = q;
     state.target = framePos(q, 0, new THREE.Vector3());
     placeMarker(dropMarker, q);
