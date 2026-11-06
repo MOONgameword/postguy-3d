@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createIntroModels } from './intro-models.js?v=20261106-spin-xy-v2';
+import { createIntroModels } from './intro-models.js?v=20261106-start-tap-v3';
 import {createSceneOutline} from './scene-outline.js?v=20261026-canopy-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
@@ -1461,7 +1461,7 @@ function mount() {
   // Fade out the on-foot action when returning to the saddle.
   playAnim('sit', { fade: 0.15 });
   setRideBtn();
-  toast('上车 · 油门加速，刹车减速');
+  toast('上车 · 摇杆前推加速，后拉减速或倒车');
 }
 
 function toggleRide() { state.onBike ? dismount() : mount(); }
@@ -1600,22 +1600,6 @@ function resetMovement() {
 }
 addEventListener('blur',resetMovement);
 document.addEventListener('visibilitychange',() => { if (document.hidden) resetMovement(); });
-function hold(el, set) {
-  let pointer = null;
-  const off = () => { const old = pointer; pointer = null; set(false); if (old !== null && el.hasPointerCapture(old)) el.releasePointerCapture(old); };
-  el.addEventListener('pointerdown', e => {
-    if (pointer !== null || e.button !== 0) return;
-    pointer = e.pointerId; el.setPointerCapture(pointer); set(true); e.preventDefault();
-  });
-  for (const type of ['pointerup','pointercancel','lostpointercapture']) el.addEventListener(type,e => { if (e.pointerId === pointer) off(); });
-  addEventListener('blur',off);
-  document.addEventListener('visibilitychange',() => { if (document.hidden) off(); });
-}
-hold($('gas'), v => gasOn = v);
-hold($('brake'), v => {
-  if (v && !brakeOn && !state.onBike) jumpQueued = true;   // 下车时刹车键 = 跳
-  brakeOn = v;
-});
 if ($('btnRide')) $('btnRide').addEventListener('click', toggleRide);
 addEventListener('keydown', e => {
   if (e.code === 'KeyF') toggleRide();
@@ -1962,7 +1946,7 @@ function updateFoot(dt) {
   const swimming = inWater && waterSurfaceR(_ftU) - groundR(_ftU) > (foot.swimming ? .58 : .68) * S;
   if (swimming !== foot.swimming) {
     foot.swimming = swimming;
-    if (swimming) { foot.air = false; foot.vy = 0; foot.h = 0; toast('开始游泳 · 摇杆划水，油门加速'); }
+    if (swimming) { foot.air = false; foot.vy = 0; foot.h = 0; toast('开始游泳 · 摇杆划水'); }
   }
 
   /* 高度只在「离地」这一维上算重力，方向由 frame 的本地 up 给出 */

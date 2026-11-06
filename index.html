@@ -263,16 +263,12 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
     <div class="compass" id="mapLocation" role="button" tabindex="0" aria-label="星球远眺" aria-pressed="false" title="点击坐标：星球远眺"><span class="arw" id="arw">➤</span><span id="dist">-- m</span></div>
 
     <div class="speed">速度<br><b id="spd">0</b> km/h</div>
-    <div class="hint" id="hint">左摇杆转向 · 右侧油门/刹车</div>
+    <div class="hint" id="hint">摇杆前后控制车速 · 左右转向</div>
     <div id="dbg" style="position:absolute;left:8px;top:118px;max-width:58%;color:#fff;font-size:10px;line-height:1.5;
          text-shadow:0 1px 2px #000;white-space:pre-wrap;"></div>
 
     <div class="stick" id="stick"><i id="knob"></i></div>
     <div id="btnRide">下车</div>
-    <div class="brake" id="brake">刹车<img src="./assets/ui/btn-brake.png" alt=""
-         onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
-    <div class="gas" id="gas">油门<img src="./assets/ui/btn-gas.png" alt=""
-         onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
 
     <div class="bottom">
       <div class="bbtn" data-panel="bag" role="button" tabindex="0" aria-label="背包"><em>♧</em><span>背包</span><img src="./assets/ui/btn-bag.png" alt=""
@@ -314,6 +310,6 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
 })();
 </script>
 <style>.taskbar[hidden] { display:none !important; }</style>
-<script type="module" src="./game.js?v=20261106-spin-xy-v2"></script>
+<script type="module" src="./game.js?v=20261106-ride-ui-v4"></script>
 </body>
 </html>

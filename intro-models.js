@@ -113,7 +113,7 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   });
   const arrow=new T.Shape();arrow.moveTo(-.24,-.18);arrow.lineTo(.04,.10);arrow.lineTo(-.12,.10);arrow.lineTo(-.12,.26);arrow.lineTo(.32,.26);arrow.lineTo(.32,-.18);arrow.lineTo(.16,-.18);arrow.lineTo(.16,-.02);arrow.lineTo(-.12,-.30);arrow.closePath();
   const arrowMesh=outlined(new T.ExtrudeGeometry(arrow,{depth:.045,bevelEnabled:false}),[front,side],start);arrowMesh.position.set(1.22,0,.16);arrowMesh.userData.pivot=start;hits.push(arrowMesh);
-  let width=0,height=0,pointer=null,active=null,downX=0,downY=0,moved=false,arrowDown=false;
+  let width=0,height=0,pointer=null,active=null,downX=0,downY=0,moved=false;
   const ray=new T.Raycaster(),ndc=new T.Vector2();
   function resize(){
     const r=gate.getBoundingClientRect();if(!r.width||!r.height)return;
@@ -138,7 +138,6 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   gate.addEventListener('pointerdown',event=>{
     if(pointer!==null||event.button!==0)return;
     const hit=pick(event);active=hit?.userData.pivot;if(!active)return;
-    arrowDown=hit===arrowMesh;
     pointer=event.pointerId;downX=event.clientX;downY=event.clientY;moved=false;
     gate.setPointerCapture(pointer);event.preventDefault();
   });
@@ -148,7 +147,7 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   });
   gate.addEventListener('pointerup',event=>{
     if(event.pointerId!==pointer)return;
-    const launch=arrowDown&&!moved&&pick(event)===arrowMesh;
+    const launch=active===start&&!moved&&pick(event)?.userData.pivot===start;
     const selected=active,dx=event.clientX-downX,dy=event.clientY-downY;
     const vertical=moved&&Math.abs(dy)>Math.abs(dx);
     const direction=moved?Math.sign(vertical?dy:dx):1;
@@ -157,8 +156,8 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   for(const type of ['pointercancel','lostpointercapture'])gate.addEventListener(type,event=>{if(event.pointerId===pointer)reset();});
   window.addEventListener('blur',reset);
   button.addEventListener('click',event=>{if(event.detail===0)onStart();});
-  button.setAttribute('aria-label','开始送货：点击右侧箭头进入，触摸文字旋转');
-  button.title='横划或竖划旋转一圈并复位，点击右侧箭头进入游戏';
+  button.setAttribute('aria-label','开始送货：轻点进入游戏，拖动旋转');
+  button.title='轻点开始送货进入游戏；横划或竖划旋转一圈并复位';
   gate.classList.add('models-ready');resize();
   return {render(){
     for(const spin of spins.values())spin.update();
