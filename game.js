@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createIntroModels } from './intro-models.js?v=20261106-1';
 import {createSceneOutline} from './scene-outline.js?v=20261026-canopy-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
@@ -100,7 +101,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 const sceneOutline=createSceneOutline(renderer,{mobile:IS_MOBILE});
-function renderScene(){sceneOutline.render(scene,camera,{overview:scenicView||introPreview});}
+let introModels=null;
+function renderScene(){sceneOutline.render(scene,camera,{overview:scenicView||introPreview});if(introPreview)introModels?.render();}
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xbcdcf2, CFG.fog[0], CFG.fog[1]);
@@ -2034,13 +2036,13 @@ function updateCamera(dt) {
 
   /* 跟随镜头按场景尺度 S 定位；速度本身已经乘过 S。 */
   const wide = scenicView || introPreview;
-  scene.fog.near += ((wide ? 120 : CFG.fog[0]) - scene.fog.near) * Math.min(1, dt * 3);
-  scene.fog.far += ((wide ? 4600 : CFG.fog[1]) - scene.fog.far) * Math.min(1, dt * 3);
+  scene.fog.near += ((introPreview ? 5000 : wide ? 120 : CFG.fog[0]) - scene.fog.near) * Math.min(1, dt * 3);
+  scene.fog.far += ((introPreview ? 7000 : wide ? 4600 : CFG.fog[1]) - scene.fog.far) * Math.min(1, dt * 3);
   if (wide) {
     // Scenic view is an actual orbital shot: aim at the planet centre and
     // place the camera far enough out that the complete sphere fits on both
     // desktop and portrait phone viewports.
-    const scenicDistance = overviewDistance(PLANET.R, camera.fov, camera.aspect);
+    const scenicDistance = overviewDistance(PLANET.R, camera.fov, camera.aspect) * (introPreview ? .90 : 1);
     _scenicDir.copy(_cUp).normalize();
     camGoal.copy(PLANET.C).addScaledVector(_scenicDir, scenicDistance);
     camera.position.lerp(camGoal, Math.min(1, dt * 2.4));
@@ -2636,15 +2638,19 @@ async function boot() {
   const gate = $('start');
   gate.classList.add('on');
   document.body.classList.add('welcome');
-  loop();
-  $('btnStart').addEventListener('click', () => {
+  const enterGame = () => {
+    if(!introPreview)return;
     gate.classList.remove('on');
     document.body.classList.remove('welcome');
     introPreview = false;
+    introModels?.dispose();introModels=null;
     showTaskNotice();
     resize();
     clock.getDelta();
-  }, { once: true });
+  };
+  try { introModels=await createIntroModels({renderer,gate,button:$('btnStart'),onStart:enterGame}); }
+  catch(error){console.error('Intro models:',error);$('btnStart').addEventListener('click',enterGame,{once:true});}
+  loop();
 }
 
 function goFullscreen() {

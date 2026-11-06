@@ -158,6 +158,18 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 .mobile-ui .panel .close { min-height:48px; font-size:16px; }
 .mobile-ui #start button { min-height:52px; font-size:17px; }
 .mobile-ui #start .intro-help { font-size:13px; }
+
+/* Live planet with touchable extruded lettering; DOM controls keep keyboard access. */
+#start.models-ready { background:transparent; padding:0; touch-action:none; }
+#start.models-ready > :not(button) { display:none; }
+#start.models-ready button { position:absolute; margin:0; padding:0; min-width:0; min-height:0;
+  background:transparent; border:0; box-shadow:none; border-radius:0; color:transparent;
+  font-size:0; transform:none; touch-action:none; cursor:grab; }
+#start.models-ready button:hover,#start.models-ready button:active { background:transparent; box-shadow:none; transform:none; }
+#start.models-ready button span { display:none; }
+#start.models-ready button:focus-visible { outline:2px dashed #fff9da; outline-offset:5px; }
+#start.models-ready #btnStart { cursor:pointer; }
+.welcome .film-edge { display:none; }
 .mobile-ui .hint { display:none; }
 @media (orientation:portrait) {
   .mobile-ui .bottom { bottom:calc(52px + env(safe-area-inset-bottom)); padding:5px 8px; }
