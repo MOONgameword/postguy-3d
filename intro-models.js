@@ -1,4 +1,32 @@
 import * as T from 'three';
+import { FBXLoader } from './vendor/loaders/FBXLoader.js';
+
+export function titleGeometries(model) {
+  model.updateMatrixWorld(true);
+  const letters=[];
+  model.traverse(mesh=>{
+    if(!mesh.isMesh)return;
+    const geometry=mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+    geometry.computeBoundingBox();
+    letters.push({geometry,center:geometry.boundingBox.getCenter(new T.Vector3()),size:geometry.boundingBox.getSize(new T.Vector3())});
+  });
+  letters.sort((a,b)=>a.center.x-b.center.x);
+  if(letters.length!==4)throw new Error('标题 FBX 应包含四个独立文字');
+  const size=Math.max(...letters.flatMap(letter=>[letter.size.x,letter.size.y]));
+  return letters.map(({geometry,center})=>{
+    geometry.translate(-center.x,-center.y,-center.z).scale(1/size,1/size,1/size);
+    geometry.computeVertexNormals();geometry.clearGroups();
+    const normal=geometry.attributes.normal,index=geometry.index;
+    const count=index?index.count:normal.count;
+    let previous=-1,start=0;
+    for(let i=0;i<count;i+=3){
+      const material=Math.abs(normal.getZ(index?index.getX(i):i))>.9?0:1;
+      if(material!==previous){if(previous!==-1)geometry.addGroup(start,i-start,previous);start=i;previous=material;}
+    }
+    geometry.addGroup(start,count-start,previous);
+    return geometry;
+  });
+}
 
 export function glyphGeometry(glyph,depth=.14) {
   const path=new T.ShapePath();
@@ -14,9 +42,14 @@ export function glyphGeometry(glyph,depth=.14) {
 
 // Real extruded glyphs, rendered over the live planet using the existing WebGL context.
 export async function createIntroModels({renderer,gate,button,onStart}) {
-  const response=await fetch('./assets/ui/intro-glyphs.json?v=20261106-1');
+  const [response,titleModel]=await Promise.all([
+    fetch('./assets/ui/intro-glyphs.json?v=20261106-1'),
+    new FBXLoader().loadAsync('./assets/ui/title-wenzi.fbx?v=20261106-1')
+  ]);
   if(!response.ok)throw new Error('无法读取立体标题');
   const glyphs=await response.json();
+  const titleMeshes=titleGeometries(titleModel);
+  titleModel.traverse(mesh=>{if(mesh.isMesh){mesh.geometry.dispose();for(const material of (Array.isArray(mesh.material)?mesh.material:[mesh.material]))material.dispose();}});
   const scene=new T.Scene(),camera=new T.OrthographicCamera(-1,1,1,-1,.1,3000);
   camera.position.z=1200;
   const front=new T.MeshBasicMaterial({color:'#f1f1df',toneMapped:false});
@@ -41,8 +74,8 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
     return mesh;
   }
   for(const [i,char] of [...'小熊快送'].entries()){
-    const pivot=new T.Group();scene.add(pivot);pivot.rotation.set(-.28,-.18,0);
-    const mesh=outlined(glyphGeometry(glyphs[char],.26),[front,side],pivot);
+    const pivot=new T.Group();scene.add(pivot);pivot.rotation.set(-.20,-.12,0);
+    const mesh=outlined(titleMeshes[i],[front,side],pivot);
     mesh.userData.pivot=pivot;hits.push(mesh);targets.push(pivot);
     const control=document.createElement('button');control.type='button';control.className='intro-letter';
     control.setAttribute('aria-label',`${char}：拖动旋转，方向键旋转`);gate.append(control);labels.push(control);
