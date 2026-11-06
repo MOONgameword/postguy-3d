@@ -2,15 +2,15 @@ import * as T from 'three';
 import { FBXLoader } from './vendor/loaders/FBXLoader.js';
 
 export function createSpin(pivot,now=()=>performance.now()) {
-  const home=pivot.rotation.clone();let started=null;
+  const home=pivot.rotation.clone();let started=null,axis='y',direction=1;
   return {
-    start(){if(started===null)started=now();},
+    start(nextAxis='y',nextDirection=1){if(started===null){axis=nextAxis==='x'?'x':'y';direction=nextDirection<0?-1:1;started=now();}},
     update(){
       if(started===null)return;
       const t=Math.min(1,Math.max(0,(now()-started)/1100));
       pivot.rotation.copy(home);
       if(t===1){started=null;return;}
-      pivot.rotation.y+=Math.PI*2*(t*t*(3-2*t));
+      pivot.rotation[axis]+=direction*Math.PI*2*(t*t*(3-2*t));
     },
     reset(){started=null;pivot.rotation.copy(home);}
   };
@@ -94,10 +94,10 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
     const mesh=outlined(titleMeshes[i],[front,side],pivot);
     mesh.userData.pivot=pivot;hits.push(mesh);targets.push(pivot);
     const control=document.createElement('button');control.type='button';control.className='intro-letter';
-    control.setAttribute('aria-label',`${char}：轻触旋转一圈并复位`);gate.append(control);labels.push(control);
+    control.setAttribute('aria-label',`${char}：横划或竖划旋转一圈并复位`);gate.append(control);labels.push(control);
     control.addEventListener('keydown',event=>{
       if(!event.key.startsWith('Arrow')&&!['Enter',' '].includes(event.key))return;event.preventDefault();
-      spins.get(pivot).start();
+      spins.get(pivot).start(['ArrowUp','ArrowDown'].includes(event.key)?'x':'y',['ArrowLeft','ArrowUp'].includes(event.key)?-1:1);
     });
   }
   const start=new T.Group();scene.add(start);start.rotation.set(.13,-.035,0);targets.push(start);
@@ -149,13 +149,16 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   gate.addEventListener('pointerup',event=>{
     if(event.pointerId!==pointer)return;
     const launch=arrowDown&&!moved&&pick(event)===arrowMesh;
-    const selected=active;reset();if(launch)onStart();else spins.get(selected).start();
+    const selected=active,dx=event.clientX-downX,dy=event.clientY-downY;
+    const vertical=moved&&Math.abs(dy)>Math.abs(dx);
+    const direction=moved?Math.sign(vertical?dy:dx):1;
+    reset();if(launch)onStart();else spins.get(selected).start(vertical?'x':'y',direction);
   });
   for(const type of ['pointercancel','lostpointercapture'])gate.addEventListener(type,event=>{if(event.pointerId===pointer)reset();});
   window.addEventListener('blur',reset);
   button.addEventListener('click',event=>{if(event.detail===0)onStart();});
   button.setAttribute('aria-label','开始送货：点击右侧箭头进入，触摸文字旋转');
-  button.title='触摸文字旋转一圈，点击右侧箭头进入游戏';
+  button.title='横划或竖划旋转一圈并复位，点击右侧箭头进入游戏';
   gate.classList.add('models-ready');resize();
   return {render(){
     for(const spin of spins.values())spin.update();
