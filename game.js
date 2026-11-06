@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createIntroModels } from './intro-models.js?v=20261106-wenzi-v1';
+import { createIntroModels } from './intro-models.js?v=20261106-spin-v1';
 import {createSceneOutline} from './scene-outline.js?v=20261026-canopy-v1';
 import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';

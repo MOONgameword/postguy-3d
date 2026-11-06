@@ -1,6 +1,21 @@
 import * as T from 'three';
 import { FBXLoader } from './vendor/loaders/FBXLoader.js';
 
+export function createSpin(pivot,now=()=>performance.now()) {
+  const home=pivot.rotation.clone();let started=null;
+  return {
+    start(){if(started===null)started=now();},
+    update(){
+      if(started===null)return;
+      const t=Math.min(1,Math.max(0,(now()-started)/1100));
+      pivot.rotation.copy(home);
+      if(t===1){started=null;return;}
+      pivot.rotation.y+=Math.PI*2*(t*t*(3-2*t));
+    },
+    reset(){started=null;pivot.rotation.copy(home);}
+  };
+}
+
 export function titleGeometries(model) {
   model.updateMatrixWorld(true);
   const letters=[];
@@ -57,7 +72,7 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   const yellow=new T.MeshBasicMaterial({color:'#efc956',toneMapped:false});
   const gold=new T.MeshBasicMaterial({color:'#ad8942',toneMapped:false});
   const ink=new T.LineBasicMaterial({color:'#202c29'});
-  const targets=[],hits=[],labels=[];
+  const targets=[],hits=[],labels=[],spins=new Map();
   function outlined(geometry,materials,parent){
     const mesh=new T.Mesh(geometry,materials);parent.add(mesh);
     let edgeGeometry=new T.EdgesGeometry(geometry,35);
@@ -75,17 +90,18 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   }
   for(const [i,char] of [...'小熊快送'].entries()){
     const pivot=new T.Group();scene.add(pivot);pivot.rotation.set(-.20,-.12,0);
+    spins.set(pivot,createSpin(pivot));
     const mesh=outlined(titleMeshes[i],[front,side],pivot);
     mesh.userData.pivot=pivot;hits.push(mesh);targets.push(pivot);
     const control=document.createElement('button');control.type='button';control.className='intro-letter';
-    control.setAttribute('aria-label',`${char}：拖动旋转，方向键旋转`);gate.append(control);labels.push(control);
+    control.setAttribute('aria-label',`${char}：轻触旋转一圈并复位`);gate.append(control);labels.push(control);
     control.addEventListener('keydown',event=>{
-      if(!event.key.startsWith('Arrow'))return;event.preventDefault();
-      pivot.rotation.y+=(event.key==='ArrowLeft'?-.2:event.key==='ArrowRight'?.2:0);
-      pivot.rotation.x+=(event.key==='ArrowUp'?-.2:event.key==='ArrowDown'?.2:0);
+      if(!event.key.startsWith('Arrow')&&!['Enter',' '].includes(event.key))return;event.preventDefault();
+      spins.get(pivot).start();
     });
   }
   const start=new T.Group();scene.add(start);start.rotation.set(.13,-.035,0);targets.push(start);
+  spins.set(start,createSpin(start));
   const panelShape=new T.Shape();panelShape.moveTo(-1.65,-.43);panelShape.lineTo(1.65,-.43);panelShape.lineTo(1.65,.43);panelShape.lineTo(-1.65,.43);panelShape.closePath();
   const panelGeo=new T.ExtrudeGeometry(panelShape,{depth:.22,bevelEnabled:true,bevelThickness:.06,bevelSize:.06,bevelSegments:1,steps:1});
   panelGeo.translate(0,0,-.16);
@@ -97,7 +113,7 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   });
   const arrow=new T.Shape();arrow.moveTo(-.24,-.18);arrow.lineTo(.04,.10);arrow.lineTo(-.12,.10);arrow.lineTo(-.12,.26);arrow.lineTo(.32,.26);arrow.lineTo(.32,-.18);arrow.lineTo(.16,-.18);arrow.lineTo(.16,-.02);arrow.lineTo(-.12,-.30);arrow.closePath();
   const arrowMesh=outlined(new T.ExtrudeGeometry(arrow,{depth:.045,bevelEnabled:false}),[front,side],start);arrowMesh.position.set(1.22,0,.16);arrowMesh.userData.pivot=start;hits.push(arrowMesh);
-  let width=0,height=0,pointer=null,active=null,lastX=0,lastY=0,downX=0,downY=0,moved=false;
+  let width=0,height=0,pointer=null,active=null,downX=0,downY=0,moved=false,arrowDown=false;
   const ray=new T.Raycaster(),ndc=new T.Vector2();
   function resize(){
     const r=gate.getBoundingClientRect();if(!r.width||!r.height)return;
@@ -105,8 +121,9 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
     const size=Math.min(width*.30,height*.24),gap=size*1.07;
     const center=height*.035;
     targets.slice(0,4).forEach((pivot,i)=>{
-      pivot.scale.setScalar(size);pivot.position.set((i%2?1:-1)*gap/2,center+(i<2?1:-1)*gap/2,30);
-      Object.assign(labels[i].style,{left:`${width/2+pivot.position.x-size*.5}px`,top:`${height/2-pivot.position.y-size*.5}px`,width:`${size}px`,height:`${size}px`});
+      const letterSize=size*.8;
+      pivot.scale.setScalar(letterSize);pivot.position.set((i%2?1:-1)*gap/2,center+(i<2?1:-1)*gap/2,30);
+      Object.assign(labels[i].style,{left:`${width/2+pivot.position.x-letterSize*.5}px`,top:`${height/2-pivot.position.y-letterSize*.5}px`,width:`${letterSize}px`,height:`${letterSize}px`});
     });
     const buttonScale=Math.min(width*.15,height*.12);
     start.scale.setScalar(buttonScale);start.position.set(0,-height*.335,30);
@@ -115,30 +132,33 @@ export async function createIntroModels({renderer,gate,button,onStart}) {
   function pick(event){
     const r=gate.getBoundingClientRect();ndc.set((event.clientX-r.left)/r.width*2-1,-(event.clientY-r.top)/r.height*2+1);
     scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);ray.setFromCamera(ndc,camera);
-    return ray.intersectObjects(hits,false)[0]?.object.userData.pivot;
+    return ray.intersectObjects(hits,false)[0]?.object;
   }
   function reset(){const old=pointer;pointer=null;active=null;if(old!==null&&gate.hasPointerCapture(old))gate.releasePointerCapture(old);}
   gate.addEventListener('pointerdown',event=>{
     if(pointer!==null||event.button!==0)return;
-    active=pick(event);if(!active)return;
-    pointer=event.pointerId;downX=lastX=event.clientX;downY=lastY=event.clientY;moved=false;
+    const hit=pick(event);active=hit?.userData.pivot;if(!active)return;
+    arrowDown=hit===arrowMesh;
+    pointer=event.pointerId;downX=event.clientX;downY=event.clientY;moved=false;
     gate.setPointerCapture(pointer);event.preventDefault();
   });
   gate.addEventListener('pointermove',event=>{
     if(event.pointerId!==pointer)return;
     if(Math.hypot(event.clientX-downX,event.clientY-downY)>8)moved=true;
-    if(moved){active.rotation.y+=(event.clientX-lastX)*.012;active.rotation.x+=(event.clientY-lastY)*.012;}
-    lastX=event.clientX;lastY=event.clientY;
   });
   gate.addEventListener('pointerup',event=>{
     if(event.pointerId!==pointer)return;
-    const launch=active===start&&!moved&&pick(event)===start;reset();if(launch)onStart();
+    const launch=arrowDown&&!moved&&pick(event)===arrowMesh;
+    const selected=active;reset();if(launch)onStart();else spins.get(selected).start();
   });
   for(const type of ['pointercancel','lostpointercapture'])gate.addEventListener(type,event=>{if(event.pointerId===pointer)reset();});
   window.addEventListener('blur',reset);
   button.addEventListener('click',event=>{if(event.detail===0)onStart();});
+  button.setAttribute('aria-label','开始送货：点击右侧箭头进入，触摸文字旋转');
+  button.title='触摸文字旋转一圈，点击右侧箭头进入游戏';
   gate.classList.add('models-ready');resize();
   return {render(){
+    for(const spin of spins.values())spin.update();
     const r=gate.getBoundingClientRect();if(r.width!==width||r.height!==height)resize();
     const autoClear=renderer.autoClear;renderer.autoClear=false;renderer.clearDepth();renderer.render(scene,camera);renderer.autoClear=autoClear;
   },dispose(){
