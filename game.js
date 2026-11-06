@@ -1413,7 +1413,11 @@ function playAnim(name, { fade = 0.18, once = false, speed = 1 } = {}) {
 
 function setRideBtn() {
   const b = $('btnRide');
-  if (b) b.textContent = state.onBike ? '下车' : '上车';
+  if (b) {
+    const action = state.onBike ? '下车' : '上车';
+    b.setAttribute('aria-label', action);
+    b.title = action;
+  }
 }
 
 const _dmQ = new THREE.Quaternion();

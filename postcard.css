@@ -170,6 +170,8 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 #start.models-ready button:focus-visible { outline:2px dashed #fff9da; outline-offset:5px; }
 #start.models-ready #btnStart { cursor:pointer; }
 .welcome .film-edge { display:none; }
+
+
 .mobile-ui .hint { display:none; }
 @media (orientation:portrait) {
   .mobile-ui .bottom { bottom:calc(52px + env(safe-area-inset-bottom)); padding:5px 8px; }
@@ -214,3 +216,10 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 #mini, #mapLocation { cursor:pointer; touch-action:manipulation; }
 #mini[aria-pressed=true] { border-color:#557b68; box-shadow:0 0 0 2px rgba(244,239,222,.85),var(--shadow); }
 #mapLocation[aria-pressed=true] { color:#375c43; }
+
+/* Paw action retains the existing ride control anchor on every orientation. */
+#btnRide,.mobile-ui #btnRide { width:72px; height:72px; padding:0; border:0;
+  border-radius:0; background:transparent; box-shadow:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
+#btnRide img { width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none; }
+#btnRide:focus-visible { outline:2px solid #fff5d8; outline-offset:3px; }

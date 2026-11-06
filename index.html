@@ -221,7 +221,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   .brake.img { width:50px; height:50px; right:88px; bottom:28px; }
 }
 </style>
-<link rel="stylesheet" href="./postcard.css?v=20261106-intro-models">
+<link rel="stylesheet" href="./postcard.css?v=20261106-paw-v1">
 <script type="importmap">
 { "imports": {
   "three": "./vendor/three.module.js",
@@ -268,7 +268,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
          text-shadow:0 1px 2px #000;white-space:pre-wrap;"></div>
 
     <div class="stick" id="stick"><i id="knob"></i></div>
-    <div id="btnRide">下车</div>
+    <button id="btnRide" type="button" aria-label="下车" title="下车"><img src="./assets/ui/ride-paw.png?v=20261106-1" alt="" draggable="false"></button>
 
     <div class="bottom">
       <div class="bbtn" data-panel="bag" role="button" tabindex="0" aria-label="背包"><em>♧</em><span>背包</span><img src="./assets/ui/btn-bag.png" alt=""
@@ -310,6 +310,6 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
 })();
 </script>
 <style>.taskbar[hidden] { display:none !important; }</style>
-<script type="module" src="./game.js?v=20261106-ride-ui-v4"></script>
+<script type="module" src="./game.js?v=20261106-paw-v1"></script>
 </body>
 </html>
