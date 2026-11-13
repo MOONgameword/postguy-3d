@@ -21,6 +21,13 @@ city.traverse(o=>{if(!o.isMesh||!/^Tree_/.test(o.name))return;
  assert.equal(o.userData.stylizedTree,true);assert.equal(o.material.name,'StylizedTree');geometries.add(o.geometry);
  assert.equal(o.userData.collisionGeometry.attributes.position.count,1500);
  const near=o.userData.treeLod.near,far=o.userData.treeLod.far;
+ assert.equal(o.material.userData.outlineMask,true);
+ for(const g of [near,far]) {
+   const mask=g.attributes.outlineAllowed.array;
+   assert.equal(mask.length,g.attributes.position.count);
+   assert.ok(mask.slice(0,1500).every(x=>x===1),'Bark keeps its outline');
+   assert.ok(mask.slice(1500).every(x=>x===2),'Leaves use whole-canopy outlines only');
+ }
  for(const key of ['position','normal','uv','color']) {
    const trunk=o.userData.collisionGeometry.attributes[key].array;
    assert.deepEqual(near.attributes[key].array.slice(0,trunk.length),trunk,'Near trunk matches collision mesh');

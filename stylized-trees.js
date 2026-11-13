@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { mergeGeometries } from './vendor/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { useOutlineMask } from './outline-mask.js?v=20261026-canopy-v1';
 
 export const TREE_TRUNK_URL = './assets/trees/wooden-trunk-v1.glb';
 export async function loadTreeTrunk(buffer) {
@@ -175,6 +176,7 @@ export function replaceStylizedTrees(city, { mobile = false, trunkAsset = null }
   const distant = Array.from({length:6}, (_, i) => buildStylizedTree(817 + i * 397, 4, trunkAsset?.geometry));
   const profiles = new Map();
   const material = createTreeMaterial(trunkAsset?.texture);
+  useOutlineMask(material);
   const depthMaterial = reiLeaves(new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,side:T.DoubleSide}));
   material.name = 'StylizedTree';
   const point = new T.Vector3(), pivot = new T.Vector3(), up = new T.Vector3(), local = new T.Vector3();
@@ -219,6 +221,12 @@ export function replaceStylizedTrees(city, { mobile = false, trunkAsset = null }
         for (const g of [geo,far]) {
           g.attributes.normal.array.set(trunk.attributes.normal.array,0);
         }
+      }
+      // Keep the current whole-canopy outline without outlining individual leaf cards.
+      for (const g of [geo,far]) {
+        const mask = new Float32Array(g.attributes.position.count).fill(2);
+        mask.fill(1,0,trunkVertexCount);
+        g.setAttribute('outlineAllowed',new T.BufferAttribute(mask,1));
       }
       profiles.set(profileKey,{geometry:geo,trunk,far});
     }
