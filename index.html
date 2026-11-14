@@ -221,7 +221,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   .brake.img { width:50px; height:50px; right:88px; bottom:28px; }
 }
 </style>
-<link rel="stylesheet" href="./postcard.css?v=20261106-paw-position-v2">
+<link rel="stylesheet" href="./postcard.css?v=20261114-right-icons-v1">
 <script type="importmap">
 { "imports": {
   "three": "./vendor/three.module.js",
@@ -268,15 +268,12 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
          text-shadow:0 1px 2px #000;white-space:pre-wrap;"></div>
 
     <div class="stick" id="stick"><i id="knob"></i></div>
-    <button id="btnRide" type="button" aria-label="下车" title="下车"><img src="./assets/ui/ride-paw.png?v=20261106-1" alt="" draggable="false"></button>
+    <button id="btnRide" type="button" aria-label="下车" title="下车"><img src="./assets/ui/paw-256.png" width="256" height="256" alt="" draggable="false"></button>
 
     <div class="bottom">
-      <div class="bbtn" data-panel="bag" role="button" tabindex="0" aria-label="背包"><em>♧</em><span>背包</span><img src="./assets/ui/btn-bag.png" alt=""
-           onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
-      <div class="bbtn" data-panel="task" role="button" tabindex="0" aria-label="任务笔记"><em>▤</em><span>任务笔记</span><img src="./assets/ui/btn-note.png" alt=""
-           onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
-      <div class="bbtn" data-panel="shop" role="button" tabindex="0" aria-label="商店"><em>⌂</em><span>商店</span><img src="./assets/ui/btn-shop.png" alt=""
-           onload="this.parentNode.classList.add('img')" onerror="this.remove()"></div>
+      <div class="bbtn" data-panel="bag" role="button" tabindex="0" aria-label="背包"><img src="./assets/ui/bag-256.png" width="256" height="256" alt="" draggable="false"></div>
+      <div class="bbtn" data-panel="task" role="button" tabindex="0" aria-label="任务笔记"><img src="./assets/ui/note-256.png" width="256" height="256" alt="" draggable="false"></div>
+      <div class="bbtn" data-panel="shop" role="button" tabindex="0" aria-label="商店"><img src="./assets/ui/shop-256.png" width="256" height="256" alt="" draggable="false"></div>
     </div>
 
     <div class="toast" id="toast"></div>

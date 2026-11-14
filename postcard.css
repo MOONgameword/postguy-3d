@@ -228,3 +228,25 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   #btnRide,.mobile-ui #btnRide { width:110px; height:110px; right:4%;
     bottom:max(22.5%,env(safe-area-inset-bottom)); }
 }
+
+/* Supplied illustrated icons: right-side column and a separate ride action below. */
+.bottom,.mobile-ui .bottom {
+  --icon-size:clamp(48px,8vh,72px);
+  left:auto; right:max(12px,env(safe-area-inset-right)); top:43%; bottom:auto;
+  transform:none; flex-direction:column; gap:16px; padding:0;
+  border:0; border-radius:0; background:none; box-shadow:none;
+}
+.bottom .bbtn,.mobile-ui .bottom .bbtn {
+  width:calc(var(--icon-size) + 16px); height:auto; min-height:44px; padding:0;
+  flex-direction:column; gap:0; border:0; background:none; box-shadow:none;
+  touch-action:manipulation; user-select:none;
+}
+.bottom .bbtn img { display:block; width:var(--icon-size); height:var(--icon-size);
+  object-fit:contain; filter:drop-shadow(0 2px 2px #38221055); }
+#btnRide,.mobile-ui #btnRide { right:max(16px,env(safe-area-inset-right));
+  bottom:max(7%,env(safe-area-inset-bottom)); width:96px; height:96px; }
+@media (orientation:landscape) and (max-height:540px) {
+  .bottom,.mobile-ui .bottom { --icon-size:44px; right:112px; top:50%;
+    transform:translateY(-50%); gap:8px; }
+  #btnRide,.mobile-ui #btnRide { width:76px; height:76px; bottom:16px; }
+}
