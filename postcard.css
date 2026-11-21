@@ -284,7 +284,8 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   color:#eab366; font-size:22px; text-shadow:1px 0 #71502e,-1px 0 #71502e,0 1px #71502e,0 -1px #71502e; }
 #btnQuiet { width:186px; height:78px; padding:0; border:0; border-radius:0; background:url('./assets/ui/final/collapse.png') center/100% 100% no-repeat;
   color:#51402e; font-size:18px; font-weight:700; letter-spacing:0; box-shadow:none; }
-.bottom,.mobile-ui .bottom { --icon-size:clamp(44px,13.8vw,60px); top:40%; gap:12px; }
+.hud { --side-icon-size:clamp(44px,13.8vw,60px); --side-icon-right:max(12px,env(safe-area-inset-right)); }
+.bottom,.mobile-ui .bottom { --icon-size:var(--side-icon-size); right:var(--side-icon-right); top:40%; gap:12px; }
 .bottom .bbtn,.mobile-ui .bottom .bbtn { width:var(--icon-size); min-height:var(--icon-size); }
 .bottom .bbtn img { width:var(--icon-size); height:var(--icon-size); }
 #btnRide,.mobile-ui #btnRide { width:clamp(68px,19vw,88px); height:clamp(68px,19vw,88px); }
@@ -317,7 +318,8 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 #btnQuiet,.mobile-ui #btnQuiet { left:50%; bottom:max(12px,env(safe-area-inset-bottom));
   width:150px; height:63px; font-size:15px; padding:0 0 0 24px; }
 .compass,.mobile-ui .compass { width:102px; height:53px; padding-right:14px; font-size:14px;
-  transform:scale(.5); transform-origin:center; }
+  right:calc(var(--side-icon-right) + var(--side-icon-size) / 2 - 51px);
+  transform:scale(.666666667); transform-origin:center; }
 #mini,.mobile-ui #mini { border:5px solid #f6e8ce; outline:1px solid #69533c;
   box-shadow:0 3px 0 #63564588,inset 0 0 0 1px #69533c; }
 .speed,.mobile-ui .speed { left:12px; right:auto; bottom:27%; padding:4px 12px; border:1px solid #b0b17c;
@@ -332,7 +334,9 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .topbar,.mobile-ui .topbar { --profile-width:210px; }
   .topbar .profile-copy .pname { font-size:16px; }
   .topbar .profile-copy .edition { font-size:10px; }
-  .bottom,.mobile-ui .bottom { --icon-size:44px; top:46%; right:100px; }
+  .hud { --side-icon-size:44px; --side-icon-right:100px; }
+  .bottom,.mobile-ui .bottom { top:46%; }
+  .compass,.mobile-ui .compass { top:calc(46% - 139px); }
   #btnQuiet,.mobile-ui #btnQuiet { bottom:5px; width:130px; height:54px; font-size:13px; }
   #btnRide,.mobile-ui #btnRide { width:68px; height:68px; bottom:32px; }
 }
