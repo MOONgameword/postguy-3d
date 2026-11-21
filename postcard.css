@@ -313,7 +313,8 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 .topbar .gear,.mobile-ui .topbar .gear { margin-top:3px; }
 #btnQuiet,.mobile-ui #btnQuiet { left:50%; bottom:max(12px,env(safe-area-inset-bottom));
   width:150px; height:63px; font-size:15px; padding:0 0 0 24px; }
-.compass,.mobile-ui .compass { width:102px; height:53px; padding-right:14px; font-size:14px; }
+.compass,.mobile-ui .compass { width:102px; height:53px; padding-right:14px; font-size:14px;
+  transform:scale(.5); transform-origin:center; }
 #mini,.mobile-ui #mini { border:5px solid #f6e8ce; outline:1px solid #69533c;
   box-shadow:0 3px 0 #63564588,inset 0 0 0 1px #69533c; }
 .speed,.mobile-ui .speed { left:12px; right:auto; bottom:27%; padding:4px 12px; border:1px solid #b0b17c;
