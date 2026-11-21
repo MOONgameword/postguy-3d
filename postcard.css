@@ -244,7 +244,7 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 .bottom .bbtn img { display:block; width:var(--icon-size); height:var(--icon-size);
   object-fit:contain; filter:drop-shadow(0 2px 2px #38221055); }
 #btnRide,.mobile-ui #btnRide { right:max(16px,env(safe-area-inset-right));
-  bottom:max(7%,env(safe-area-inset-bottom)); width:96px; height:96px; }
+  bottom:max(12%,env(safe-area-inset-bottom)); width:96px; height:96px; }
 @media (orientation:landscape) and (max-height:540px) {
   .bottom,.mobile-ui .bottom { --icon-size:44px; right:112px; top:50%;
     transform:translateY(-50%); gap:8px; }
@@ -281,7 +281,7 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   color:#eab366; font-size:22px; text-shadow:1px 0 #71502e,-1px 0 #71502e,0 1px #71502e,0 -1px #71502e; }
 #btnQuiet { width:186px; height:78px; padding:0; border:0; border-radius:0; background:url('./assets/ui/final/collapse.png') center/100% 100% no-repeat;
   color:#51402e; font-size:18px; font-weight:700; letter-spacing:0; box-shadow:none; }
-.bottom,.mobile-ui .bottom { --icon-size:clamp(44px,13.8vw,60px); top:45%; gap:12px; }
+.bottom,.mobile-ui .bottom { --icon-size:clamp(44px,13.8vw,60px); top:40%; gap:12px; }
 .bottom .bbtn,.mobile-ui .bottom .bbtn { width:var(--icon-size); min-height:var(--icon-size); }
 .bottom .bbtn img { width:var(--icon-size); height:var(--icon-size); }
 #btnRide,.mobile-ui #btnRide { width:clamp(68px,19vw,88px); height:clamp(68px,19vw,88px); }
@@ -328,7 +328,7 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .topbar,.mobile-ui .topbar { --profile-width:210px; }
   .topbar .profile-copy .pname { font-size:16px; }
   .topbar .profile-copy .edition { font-size:10px; }
-  .bottom,.mobile-ui .bottom { --icon-size:44px; top:50%; right:100px; }
+  .bottom,.mobile-ui .bottom { --icon-size:44px; top:46%; right:100px; }
   #btnQuiet,.mobile-ui #btnQuiet { bottom:5px; width:130px; height:54px; font-size:13px; }
-  #btnRide,.mobile-ui #btnRide { width:68px; height:68px; bottom:16px; }
+  #btnRide,.mobile-ui #btnRide { width:68px; height:68px; bottom:32px; }
 }
