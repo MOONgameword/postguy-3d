@@ -221,7 +221,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   .brake.img { width:50px; height:50px; right:88px; bottom:28px; }
 }
 </style>
-<link rel="stylesheet" href="./postcard.css?v=20261114-right-icons-v1">
+<link rel="stylesheet" href="./postcard.css?v=20261121-final-ui-v1">
 <script type="importmap">
 { "imports": {
   "three": "./vendor/three.module.js",
@@ -237,6 +237,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
   <div class="film-edge" aria-hidden="true"></div>
   <div class="hud">
     <div class="topbar">
+      <img class="profile-panel" src="./assets/ui/final/profile.png" width="512" height="228" alt="" draggable="false">
       <div class="avatar">
         <svg viewBox="0 0 52 52"><rect width="52" height="52" fill="#bcd3e6"/>
           <circle cx="26" cy="20" r="11" fill="#f6d2b0"/>
@@ -244,15 +245,15 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
           <path d="M7 52c2-13 9-19 19-19s17 6 19 19z" fill="#f2f2f2"/></svg>
         <img src="./assets/ui/panda-avatar-v1.png" alt="" onload="this.parentNode.classList.add('img')" onerror="this.remove()">
       </div>
-      <div>
+      <div class="profile-copy">
         <div class="pname">小熊快送<span class="edition">今日必达</span></div>
         <div class="lvrow"><div class="lvbadge" id="lvNum">1</div><div class="lvbar"><i id="lvFill"></i></div></div>
         <div class="lvtxt" id="lvTxt">0/100</div>
       </div>
       <div class="spacer"></div>
-      <div class="res"><div class="ic gold">¥</div><b id="coin">0</b><i class="plus">+</i></div>
-      <div class="res"><div class="ic pack">信</div><b id="parcel">0</b><i class="plus">+</i></div>
-      <button class="gear" id="btnGear" aria-label="操作提示">☰</button>
+      <div class="res coin-res"><div class="ic gold">¥</div><b id="coin">0</b><i class="plus">+</i></div>
+      <div class="res mail-res"><div class="ic pack">信</div><b id="parcel">0</b><i class="plus">+</i></div>
+      <button class="gear" id="btnGear" aria-label="操作提示"><img src="./assets/ui/final/menu.png" width="143" height="151" alt="" draggable="false"></button>
     </div>
 
     <div class="taskbar" hidden><div class="taskicon" id="taskIcon">📮</div>
@@ -268,12 +269,12 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
          text-shadow:0 1px 2px #000;white-space:pre-wrap;"></div>
 
     <div class="stick" id="stick"><i id="knob"></i></div>
-    <button id="btnRide" type="button" aria-label="下车" title="下车"><img src="./assets/ui/paw-256.png" width="256" height="256" alt="" draggable="false"></button>
+    <button id="btnRide" type="button" aria-label="下车" title="下车"><img src="./assets/ui/final/paw.png" width="271" height="264" alt="" draggable="false"></button>
 
     <div class="bottom">
-      <div class="bbtn" data-panel="bag" role="button" tabindex="0" aria-label="背包"><img src="./assets/ui/bag-256.png" width="256" height="256" alt="" draggable="false"></div>
-      <div class="bbtn" data-panel="task" role="button" tabindex="0" aria-label="任务笔记"><img src="./assets/ui/note-256.png" width="256" height="256" alt="" draggable="false"></div>
-      <div class="bbtn" data-panel="shop" role="button" tabindex="0" aria-label="商店"><img src="./assets/ui/shop-256.png" width="256" height="256" alt="" draggable="false"></div>
+      <div class="bbtn" data-panel="bag" role="button" tabindex="0" aria-label="背包"><img src="./assets/ui/final/backpack.png" width="498" height="512" alt="" draggable="false"></div>
+      <div class="bbtn" data-panel="task" role="button" tabindex="0" aria-label="任务笔记"><img src="./assets/ui/final/notes.png" width="173" height="173" alt="" draggable="false"></div>
+      <div class="bbtn" data-panel="shop" role="button" tabindex="0" aria-label="商店"><img src="./assets/ui/final/shop.png" width="164" height="166" alt="" draggable="false"></div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -283,7 +284,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
         <div class="close" id="pClose">关闭</div></div>
     </div>
   </div>
-  <button id="btnQuiet" aria-pressed="false">收起界面</button>
+  <button id="btnQuiet" aria-pressed="false"><span>收起界面</span></button>
       <div id="loading">加载星球城市…<div class="bar"><i id="ldFill"></i></div><div class="tip" id="ldTip"></div><div class="err" id="ldErr"></div><button id="ldRetry">重 试</button></div>
   <div id="start">
     <div class="postmark" aria-hidden="true">晴日<br><span>POST / 01</span></div>

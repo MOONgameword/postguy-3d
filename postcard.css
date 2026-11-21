@@ -250,3 +250,85 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
     transform:translateY(-50%); gap:8px; }
   #btnRide,.mobile-ui #btnRide { width:76px; height:76px; bottom:16px; }
 }
+
+/* Final supplied UI kit (all source images are downsampled to <=512px). */
+.topbar { height:92px; align-items:flex-start; }
+.profile-panel { position:absolute; left:0; top:0; width:clamp(250px,38vw,520px); height:auto;
+  z-index:0; pointer-events:none; user-select:none; }
+.topbar .avatar { visibility:hidden; z-index:1; }
+.topbar > div:nth-of-type(2) { position:absolute; left:92px; top:22px; z-index:1; }
+.topbar .pname { color:#51402e; text-shadow:none; font-weight:800; }
+.topbar .edition { color:#6a6e4b; }
+.topbar .lvbadge { background:#81926a; color:#fff8df; }
+.topbar .lvbar { background:rgba(113,91,57,.25); border:2px solid #a59373; }
+.topbar .lvbar i { background:#82986c; }
+.topbar .coin-res,.topbar .mail-res { width:clamp(92px,11vw,145px); height:auto; aspect-ratio:512/307;
+  border:0; border-radius:0; box-shadow:none; background-color:transparent;
+  background-position:center; background-repeat:no-repeat; background-size:100% 100%;
+  padding:0 22px 0 42px; justify-content:flex-end; color:#51402e; font-size:18px; }
+.topbar .coin-res { background-image:url('./assets/ui/final/coin.png'); }
+.topbar .mail-res { background-image:url('./assets/ui/final/mail.png'); }
+.topbar .res .ic,.topbar .res .plus { display:none; }
+.topbar .gear { width:58px; height:60px; padding:0; border:0; border-radius:0; background:transparent;
+  box-shadow:none; font-size:0; }
+.topbar .gear img { display:block; width:100%; height:100%; object-fit:contain; }
+.compass { width:118px; height:61px; display:flex; align-items:center; justify-content:flex-end;
+  padding-right:22px; background:url('./assets/ui/final/distance.png') center/100% 100% no-repeat;
+  color:#697650; text-shadow:none; font-size:17px; font-weight:700; }
+.compass::before { content:''; position:absolute; left:15px; top:14px; width:29px; height:25px;
+  background:#f7e8d1; border-radius:50%; }
+.compass .arw { display:block; position:absolute; left:19px; top:16px; width:21px; height:21px;
+  color:#eab366; font-size:22px; text-shadow:1px 0 #71502e,-1px 0 #71502e,0 1px #71502e,0 -1px #71502e; }
+#btnQuiet { width:186px; height:78px; padding:0; border:0; border-radius:0; background:url('./assets/ui/final/collapse.png') center/100% 100% no-repeat;
+  color:#51402e; font-size:18px; font-weight:700; letter-spacing:0; box-shadow:none; }
+.bottom,.mobile-ui .bottom { --icon-size:clamp(58px,9vh,92px); gap:13px; }
+.bottom .bbtn,.mobile-ui .bottom .bbtn { width:var(--icon-size); min-height:var(--icon-size); }
+.bottom .bbtn img { width:var(--icon-size); height:var(--icon-size); }
+#btnRide,.mobile-ui #btnRide { width:clamp(84px,10vh,112px); height:clamp(84px,10vh,112px); }
+@media (max-width:600px) {
+  .topbar { left:12px; right:12px; height:68px; }
+  .profile-panel { width:clamp(220px,62vw,340px); }
+  .topbar > div:nth-of-type(2) { left:67px; top:15px; }
+  .topbar .pname { font-size:15px; letter-spacing:1px; }
+  .topbar .edition { font-size:8px; letter-spacing:2px; }
+  .topbar .lvrow { margin-top:3px; }
+  .topbar .lvbadge { width:15px; height:15px; font-size:9px; }
+  .topbar .lvbar { width:67px; height:5px; }
+  .topbar .coin-res,.topbar .mail-res { width:67px; font-size:13px; padding:0 10px 0 24px; }
+  .topbar .gear { width:43px; height:45px; }
+  .compass { width:102px; height:53px; padding-right:18px; font-size:14px; }
+  #btnQuiet { width:150px; height:63px; font-size:15px; }
+}
+
+.topbar,.mobile-ui .topbar { --profile-width:min(40vw,340px); }
+.profile-panel { width:var(--profile-width); }
+.topbar > .profile-copy:nth-of-type(2) { left:0; top:0; width:var(--profile-width); aspect-ratio:512/228; }
+.topbar .profile-copy .pname { position:absolute; left:34%; top:20%; font-size:clamp(12px,2.9vw,25px); letter-spacing:0; }
+.topbar .profile-copy .edition { display:block; font-size:clamp(8px,1.8vw,14px); letter-spacing:1px; margin-top:2px; }
+.topbar .lvrow { position:static; margin:0; }
+.topbar .lvbadge { position:absolute; left:22%; top:71%; width:13%; height:23%; background:none;
+  font-size:clamp(10px,2.5vw,19px); border:0; }
+.topbar .lvbar { position:absolute; left:35%; top:75%; width:48%; height:8%; }
+.topbar .res { align-self:flex-start; margin-top:8px; }
+.topbar .gear,.mobile-ui .topbar .gear { margin-top:3px; }
+#btnQuiet,.mobile-ui #btnQuiet { left:50%; bottom:max(12px,env(safe-area-inset-bottom));
+  width:150px; height:63px; font-size:15px; padding:0 0 0 24px; }
+.compass,.mobile-ui .compass { width:102px; height:53px; padding-right:14px; font-size:14px; }
+#mini,.mobile-ui #mini { border:5px solid #f6e8ce; outline:1px solid #69533c;
+  box-shadow:0 3px 0 #63564588,inset 0 0 0 1px #69533c; }
+.speed,.mobile-ui .speed { left:12px; right:auto; bottom:27%; padding:4px 12px; border:1px solid #b0b17c;
+  border-radius:28px; background:#73796a88; color:#d8d99a; text-shadow:none; font-size:10px; }
+.speed b,.mobile-ui .speed b { font-size:22px; font-weight:700; }
+@media (max-width:600px) {
+  .topbar,.mobile-ui .topbar { gap:4px; }
+  .topbar .coin-res,.topbar .mail-res { width:54px; min-height:0; font-size:13px; padding:0 10px 0 24px; }
+  .topbar .gear,.mobile-ui .topbar .gear { width:40px; height:43px; }
+}
+@media (orientation:landscape) and (max-height:540px) {
+  .topbar,.mobile-ui .topbar { --profile-width:210px; }
+  .topbar .profile-copy .pname { font-size:16px; }
+  .topbar .profile-copy .edition { font-size:10px; }
+  .bottom,.mobile-ui .bottom { --icon-size:48px; right:112px; }
+  #btnQuiet,.mobile-ui #btnQuiet { bottom:5px; width:130px; height:54px; font-size:13px; }
+  #btnRide,.mobile-ui #btnRide { width:76px; height:76px; bottom:16px; }
+}
