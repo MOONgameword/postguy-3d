@@ -139,7 +139,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
 #loading .load-stage { position:relative; width:min(82vw,720px); height:170px; }
 #loading .bar { position:absolute; left:0; right:0; bottom:20px; height:32px; padding:4px; border:3px solid #5d594d; border-radius:20px; background:#f7f3e5; overflow:hidden; }
 #loading .bar i { display:block; height:100%; width:0; border-radius:14px; background:linear-gradient(180deg,#a6ef88,#43b834); transition:width .2s; }
-#loading .loading-rider { position:absolute; z-index:2; left:calc(5% + var(--load-p) * 90%); bottom:28px; width:clamp(110px,18vw,190px); height:auto; transform:translateX(-50%); pointer-events:none; }
+#loading .loading-rider { position:absolute; z-index:2; left:calc(7px + var(--load-p) * (100% - 14px)); bottom:28px; width:clamp(110px,18vw,190px); height:auto; transform:translateX(-50%); pointer-events:none; }
 #loading .tip { font-size:11px; letter-spacing:0; color:rgba(255,255,255,.55); text-align:center; padding:0 22px; }
 #loading .err { font-size:12px; line-height:1.6; white-space:pre-wrap; text-align:left; padding:0 22px; color:#ff9b8f; }
 #ldRetry { display:none; margin-top:4px; padding:10px 30px; font-size:15px; font-weight:800; color:#7a3f00;
@@ -310,6 +310,6 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
 })();
 </script>
 <style>.taskbar[hidden] { display:none !important; }</style>
-<script type="module" src="./game.js?v=20261121-loading-rider-v2"></script>
+<script type="module" src="./game.js?v=20261121-loading-rider-v3"></script>
 </body>
 </html>
