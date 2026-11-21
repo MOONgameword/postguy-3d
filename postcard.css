@@ -281,10 +281,10 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   color:#eab366; font-size:22px; text-shadow:1px 0 #71502e,-1px 0 #71502e,0 1px #71502e,0 -1px #71502e; }
 #btnQuiet { width:186px; height:78px; padding:0; border:0; border-radius:0; background:url('./assets/ui/final/collapse.png') center/100% 100% no-repeat;
   color:#51402e; font-size:18px; font-weight:700; letter-spacing:0; box-shadow:none; }
-.bottom,.mobile-ui .bottom { --icon-size:clamp(58px,9vh,92px); gap:13px; }
+.bottom,.mobile-ui .bottom { --icon-size:clamp(44px,13.8vw,60px); top:45%; gap:12px; }
 .bottom .bbtn,.mobile-ui .bottom .bbtn { width:var(--icon-size); min-height:var(--icon-size); }
 .bottom .bbtn img { width:var(--icon-size); height:var(--icon-size); }
-#btnRide,.mobile-ui #btnRide { width:clamp(84px,10vh,112px); height:clamp(84px,10vh,112px); }
+#btnRide,.mobile-ui #btnRide { width:clamp(68px,19vw,88px); height:clamp(68px,19vw,88px); }
 @media (max-width:600px) {
   .topbar { left:12px; right:12px; height:68px; }
   .profile-panel { width:clamp(220px,62vw,340px); }
@@ -328,7 +328,7 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
   .topbar,.mobile-ui .topbar { --profile-width:210px; }
   .topbar .profile-copy .pname { font-size:16px; }
   .topbar .profile-copy .edition { font-size:10px; }
-  .bottom,.mobile-ui .bottom { --icon-size:48px; right:112px; }
+  .bottom,.mobile-ui .bottom { --icon-size:44px; top:50%; right:100px; }
   #btnQuiet,.mobile-ui #btnQuiet { bottom:5px; width:130px; height:54px; font-size:13px; }
-  #btnRide,.mobile-ui #btnRide { width:76px; height:76px; bottom:16px; }
+  #btnRide,.mobile-ui #btnRide { width:68px; height:68px; bottom:16px; }
 }
