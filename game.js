@@ -704,7 +704,8 @@ function inkTexture(tex, { strength = 0.62, threshold = 0.11 } = {}) {
 }
 function setProgress(f, text) {
   $('ldFill').style.width = Math.round(f * 100) + '%';
-  if (text) $('loading').firstChild.textContent = text;
+  $('loading').style.setProperty('--load-p', Math.max(0, Math.min(1, f)));
+  if (text && $('loadingLabel')) $('loadingLabel').textContent = text;
 }
 function setTip(text) { const e = $('ldTip'); if (e) e.textContent = text || ''; }
 

@@ -136,8 +136,10 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
 
 #loading { position:absolute; inset:0; background:#0f1418; color:#fff; display:flex; flex-direction:column;
            align-items:center; justify-content:center; gap:10px; font-size:14px; letter-spacing:1px; z-index:9; }
-#loading .bar { width:60%; height:6px; border-radius:3px; background:rgba(255,255,255,.18); overflow:hidden; }
-#loading .bar i { display:block; height:100%; width:0; background:#ffb347; transition:width .2s; }
+#loading .load-stage { position:relative; width:min(82vw,720px); height:170px; }
+#loading .bar { position:absolute; left:0; right:0; bottom:20px; height:32px; padding:4px; border:3px solid #5d594d; border-radius:20px; background:#f7f3e5; overflow:hidden; }
+#loading .bar i { display:block; height:100%; width:0; border-radius:14px; background:linear-gradient(180deg,#a6ef88,#43b834); transition:width .2s; }
+#loading .loading-rider { position:absolute; z-index:2; left:calc(5% + var(--load-p) * 90%); bottom:28px; width:clamp(110px,18vw,190px); height:auto; transform:translateX(-50%); pointer-events:none; }
 #loading .tip { font-size:11px; letter-spacing:0; color:rgba(255,255,255,.55); text-align:center; padding:0 22px; }
 #loading .err { font-size:12px; line-height:1.6; white-space:pre-wrap; text-align:left; padding:0 22px; color:#ff9b8f; }
 #ldRetry { display:none; margin-top:4px; padding:10px 30px; font-size:15px; font-weight:800; color:#7a3f00;
@@ -285,7 +287,7 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
     </div>
   </div>
   <button id="btnQuiet" aria-pressed="false"><span>收起界面</span></button>
-      <div id="loading">加载星球城市…<div class="bar"><i id="ldFill"></i></div><div class="tip" id="ldTip"></div><div class="err" id="ldErr"></div><button id="ldRetry">重 试</button></div>
+      <div id="loading"><div class="load-stage"><div class="bar"><i id="ldFill"></i></div><img class="loading-rider" src="./assets/ui/loading-rider-256.png" width="256" height="171" alt="" draggable="false"></div><div class="loading-label" id="loadingLabel">加载星球城市…</div><div class="tip" id="ldTip"></div><div class="err" id="ldErr"></div><button id="ldRetry">重 试</button></div>
   <div id="start">
     <div class="postmark" aria-hidden="true">晴日<br><span>POST / 01</span></div>
     <div class="eyebrow">LETTERS FROM A LITTLE PLANET</div>
@@ -308,6 +310,6 @@ html,body { height:100%; background:#0f1418; overflow:hidden; overscroll-behavio
 })();
 </script>
 <style>.taskbar[hidden] { display:none !important; }</style>
-<script type="module" src="./game.js?v=20261113-restored-trees-v1"></script>
+<script type="module" src="./game.js?v=20261121-loading-rider-v2"></script>
 </body>
 </html>

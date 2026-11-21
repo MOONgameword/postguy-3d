@@ -70,8 +70,11 @@ button:focus-visible,[role=button]:focus-visible { outline:2px solid #557b68; ou
 .panel .cell { background:#e6e3d3; color:#637158; }
 .panel .close { background:#536b56; color:var(--paper); font-weight:400; }
 #loading { background:#e9e2cf; color:#52634b; letter-spacing:3px; }
-#loading .bar { width:min(220px,60%); height:3px; background:#d6d4bf; margin:15px 0; }
-#loading .bar i { background:#7c8d68; }
+#loading .load-stage { width:min(82vw,720px); height:170px; }
+#loading .bar { width:auto; height:32px; margin:0; background:#f7f3e5; }
+#loading .bar i { background:linear-gradient(180deg,#a6ef88,#43b834); }
+#loading .loading-rider { width:clamp(110px,18vw,190px); bottom:28px; }
+#loading .loading-label { display:none; }
 #loading .tip { color:#7b8270; font-size:11px; }
 #loading .err { color:#a15e48; }
 #start { align-items:flex-start; padding:8vw; gap:24px; text-align:left; color:var(--ink);
