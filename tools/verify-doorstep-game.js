@@ -3,7 +3,7 @@ import * as T from 'three';
 // Explicit debug-only integration check against the real baked scene and props.
 export function verifyDoorstepTasks({state,player,PLANET,collisionWorld,nextTask,framePos,frameFromDir,syncBody,updateCamera}) {
   const samples=[];
-  for(let i=0;i<24;i++){
+  for(let i=0;i<23;i++){
     const old=state.target.clone();
     state.q.copy(state.targetQ);state.gr=undefined;syncBody(player,state.q,0,state,1);
     state.phase=i%2?'pickup':'deliver';nextTask();

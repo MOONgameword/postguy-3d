@@ -16,6 +16,7 @@ import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk
 import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261123-door-mail-v1';
 import { collectDeliverySites, createDeliveryPicker } from './delivery-sites.js?v=20261123-door-mail-v1';
+import { updateTaskMarker } from './task-markers.js?v=20261123-orbit-beacons-v1';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261021-granite';
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
 import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
@@ -1360,6 +1361,7 @@ function makeMarker(color, icon) {
   sp.scale.setScalar(1.6);
   g.add(ring, beam, sp);
   g.userData.ring = ring;
+  g.userData.beam = beam;
   g.userData.icon = sp;
   /* 光柱按整组放大：updateMarkers 里的 3.2 / 0.22 也就自动跟着放大了 */
   g.scale.setScalar(S);
@@ -2053,7 +2055,7 @@ function updateMarkers(dt, time) {
   [pickupMarker, dropMarker].forEach(m => {
     if (!m.visible) return;
     m.userData.ring.rotation.z += dt * 1.6;
-    m.userData.icon.position.y = 3.2 + Math.sin(time * 2.2) * 0.22;
+    updateTaskMarker(m,{overview:scenicView,camera,viewportHeight:canvas.clientHeight||innerHeight,baseScale:S,time});
   });
   if (!state.target) return;
   const p = focusPos();
