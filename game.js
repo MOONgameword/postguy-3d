@@ -17,6 +17,7 @@ import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
 import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261123-door-mail-v1';
 import { collectDeliverySites, createDeliveryPicker } from './delivery-sites.js?v=20261123-door-mail-v1';
 import { updateTaskMarker } from './task-markers.js?v=20261123-orbit-beacons-v1';
+import { navigationAxes, navigationOffset, distanceArrowRotation, renderHeadingMap } from './navigation-indicators.js?v=20261123-nav-direction-v2';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261021-granite';
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
 import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
@@ -900,17 +901,6 @@ function frameBearing(q) {
   return Math.atan2(_brC.crossVectors(_brN, _fw).dot(_up), _brN.dot(_fw));
 }
 
-/* 目标点相对 frame 正前方的偏角（0 = 正前），导航箭头用 */
-const _rbT = new THREE.Vector3(), _rbC = new THREE.Vector3();
-function relBearing(q, from, target) {
-  fUp(q, _up); fFwd(q, _fw);
-  _rbT.copy(target).sub(from);
-  _rbT.addScaledVector(_up, -_rbT.dot(_up));
-  if (_rbT.lengthSq() < 1e-8) return 0;
-  _rbT.normalize();
-  return Math.atan2(_rbC.crossVectors(_fw, _rbT).dot(_up), _fw.dot(_rbT));
-}
-
 /* ---------- 烘地表半径场 ----------
    逐三角形做重心插值，而不是像平面版那样按包围盒填最大值：
    球壳一个面片能盖住上百个格子，填最大值会把地面变成台阶，车会一路弹跳。 */
@@ -1671,10 +1661,7 @@ document.querySelectorAll('.res .plus').forEach(p => p.addEventListener('click',
   document.querySelector('.bbtn[data-panel="shop"]').click();
 }));
 
-/* ---------- 小地图 ----------
-   底图就是等距圆柱（经纬）展开的地表格网，玩家所在处截一小块出来。
-   高纬度处一格经度对应的实际距离会缩短，所以横向要按 sin(θ) 少截一些，
-   否则小地图会被横向拉扁。 */
+/* ---------- 小地图：角色前方朝上，与距离箭头共用屏幕左右基准 ---------- */
 const mini = $('mini'), mg = mini.getContext('2d');
 function buildMiniImage() {
   const W = GRID.gw, H = GRID.gh;
@@ -1703,41 +1690,26 @@ function buildMiniImage() {
     }
   }
   g.putImageData(img, 0, 0);
+  GRID.miniPixels=img.data;
   GRID.img = cv;
 }
 
 const _mmU = new THREE.Vector3(), _mmN = new THREE.Vector3(), _mmE = new THREE.Vector3();
-const _mmF = new THREE.Vector3(), _mmD = new THREE.Vector3();
+const _mmD = new THREE.Vector3(),_navOffset=new THREE.Vector2();
+let miniRaster=null;
 function drawMini() {
   /* PX 是画布像素边长，RV 是小地图半径对应的世界米数（跟着巨人尺度放大） */
   const PX = mini.width, RV = 62 * S;
   mg.fillStyle = '#1a222a';
   mg.fillRect(0, 0, PX, PX);
   const fq = focusFrame(), fp = focusPos();
-  fUp(fq, _mmU);
-  /* 当地的「北」= 世界 +Y 投到切平面；东 = 北 × 上（与经度 u 增大方向一致） */
-  _mmN.copy(YAXIS).addScaledVector(_mmU, -YAXIS.dot(_mmU));
-  if (_mmN.lengthSq() < 1e-6) fFwd(fq, _mmN);
-  _mmN.normalize();
-  _mmE.crossVectors(_mmN, _mmU).normalize();
+  navigationAxes(fq,_mmU,_mmN,_mmE);
   const k = PX / (RV * 2);
 
-  if (GRID.img) {
-    const W = GRID.gw, H = GRID.gh;
-    const theta = Math.acos(clamp(_mmU.y, -1, 1));
-    const cu = (Math.atan2(_mmU.x, _mmU.z) / (Math.PI * 2) + 0.5) * W;
-    const cv = theta / Math.PI * H;
-    const halfV = RV / (PLANET.R * Math.PI / H);
-    const halfU = RV / (PLANET.R * Math.PI * 2 * Math.max(0.08, Math.sin(theta)) / W);
-    const dw = halfU * 2, dh = halfV * 2;
-    mg.imageSmoothingEnabled = false;
-    mg.save();
-    mg.beginPath(); mg.rect(0, 0, PX, PX); mg.clip();
-    /* 跨 ±180° 经线时窗口一半在图的另一端，左右各补画一次 */
-    for (const sh of [-W, 0, W]) {
-      mg.drawImage(GRID.img, cu - halfU + sh, cv - halfV, dw, dh, -sh * (PX / dw), 0, PX, PX);
-    }
-    mg.restore();
+  if (GRID.miniPixels) {
+    if(!miniRaster||miniRaster.width!==PX)miniRaster=mg.createImageData(PX,PX);
+    renderHeadingMap(GRID.miniPixels,GRID.gw,GRID.gh,miniRaster.data,PX,PLANET.R,RV,_mmU,_mmN,_mmE);
+    mg.putImageData(miniRaster,0,0);
   }
 
   const dot = (pos, color, r) => {
@@ -1753,18 +1725,17 @@ function drawMini() {
     _mmD.copy(state.target).sub(fp);
     let dx = _mmD.dot(_mmE), dy = _mmD.dot(_mmN);
     const d = Math.hypot(dx, dy);
-    if (d > RV) { dx *= RV / d; dy *= RV / d; }
+    const edge=RV*(1-18/PX);
+    if (d > edge) { dx *= edge / d; dy *= edge / d; }
     mg.fillStyle = state.phase === 'pickup' ? '#ff5a4a' : '#38c76a';
     mg.beginPath(); mg.arc(PX / 2 + dx * k, PX / 2 - dy * k, 7, 0, 7); mg.fill();
   }
   if (!state.onBike) dot(player.position, '#ff9d2e', 4);
   for (const car of traffic) if (car.alive) dot(car.mesh.position, '#10161c', 2.5);
 
-  /* 箭头：北朝上，所以按「朝向在东/北上的分量」转 */
-  fFwd(fq, _mmF);
+  /* 角色前方固定朝上；道路和目标跟随角色转向。 */
   mg.save();
   mg.translate(PX / 2, PX / 2);
-  mg.rotate(Math.atan2(_mmF.dot(_mmE), _mmF.dot(_mmN)));
   mg.fillStyle = '#ffd24a';
   mg.beginPath();
   mg.moveTo(0, -10); mg.lineTo(7, 9); mg.lineTo(0, 4); mg.lineTo(-7, 9);
@@ -2063,8 +2034,8 @@ function updateMarkers(dt, time) {
   /* 世界是 S 倍巨人尺度，HUD 上换算回真人尺度：
      不然一辆电动车会显示 150km/h、送一趟信要跑 900 米。 */
   $('dist').textContent = Math.round(d / S) + ' m';
-  const ang = relBearing(focusFrame(), p, state.target);
-  $('arw').style.transform = `rotate(${(-ang * 180 / Math.PI)}deg)`;
+  navigationOffset(focusFrame(),p,state.target,_navOffset);
+  $('arw').style.transform = `rotate(${distanceArrowRotation(_navOffset) * 180 / Math.PI}deg)`;
   if (d < CFG.reachRadius && Math.abs(focusSpeed()) < 2 * S) reachTarget();
 }
 
