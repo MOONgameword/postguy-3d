@@ -43,6 +43,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
     drop: { value: SKY_DROP },
     groundDip: { value: GROUND_DIP },
     fogColor: { value: new THREE.Color() },
+    overview: { value: 0 },
     up: { value: new THREE.Vector3(0, 1, 0) },
     east: { value: new THREE.Vector3(1, 0, 0) }, north: { value: new THREE.Vector3(0, 0, 1) },
     sunDir: { value: new THREE.Vector3(0.65, 0.43, 0.62).normalize() },
@@ -58,6 +59,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
       uniform sampler2D panorama;
       uniform float sunU, sunAngle, drop, groundDip;
       uniform vec3 fogColor, up, east, north, sunDir;
+      uniform float overview;
       varying vec3 vDirection;
       const float INV_TAU = 0.15915494;
       const float SKY_PI = 3.14159265;
@@ -73,7 +75,7 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
         vec2 uv = vec2(fract((azimuth - sunAzimuth) * INV_TAU + sunU), 0.5 + image / SKY_PI);
         vec3 col = texture2D(panorama, uv).rgb;
         // Blend just above the ground horizon into the scene fog so distant streets dissolve into the sky.
-        col = mix(col, fogColor, (1.0 - smoothstep(-groundDip - 0.02, -groundDip + 0.07, a)) * 0.55);
+        col = mix(col, fogColor, (1.0 - smoothstep(-groundDip - 0.02, -groundDip + 0.07, a)) * 0.55 * (1.0-overview));
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -125,8 +127,9 @@ export function createAtmosphere(scene, renderer, sun, hemisphere, ambient) {
     // HemisphereLight also follows local gravity, including the planet's far side.
     hemisphere.position.copy(up);
   }
+  function setOverview(value) { uniforms.overview.value = value ? 1 : 0; }
   setTheme('day');
-  return { sky, setTheme, update, orientSun };
+  return { sky, setTheme, update, orientSun, setOverview };
 }
 
 // Subtle drifting seeds: one instanced draw, no per-frame geometry allocations.

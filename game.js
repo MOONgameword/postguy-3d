@@ -5,7 +5,7 @@ import {loadPanda, PANDA_URL} from './panda-character.js?v=20260930-28';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261026-sky-v2';
+import { createAtmosphere, createDriftingSeeds } from './atmosphere.js?v=20261123-overview-no-fog-v2';
 import { installNprShading } from './npr-shading.js?v=20261022-01';
 import { decodeRoadGeometry, installRoadGeometry, installJunctionFurniture } from './road-geometry.js?v=20261014-frontage';
 import { createToonVehicleFleet } from './toon-vehicles.js?v=20261026-distance-v1';
@@ -1997,8 +1997,12 @@ function updateCamera(dt) {
 
   /* 跟随镜头按场景尺度 S 定位；速度本身已经乘过 S。 */
   const wide = scenicView || introPreview;
-  scene.fog.near += ((introPreview ? 5000 : wide ? 120 : CFG.fog[0]) - scene.fog.near) * Math.min(1, dt * 3);
-  scene.fog.far += ((introPreview ? 7000 : wide ? 4600 : CFG.fog[1]) - scene.fog.far) * Math.min(1, dt * 3);
+  const overviewNoFog = scenicView;
+  const fogNear = overviewNoFog ? 1000000 : (introPreview ? 5000 : CFG.fog[0]);
+  const fogFar = overviewNoFog ? 1000001 : (introPreview ? 7000 : CFG.fog[1]);
+  scene.fog.near += (fogNear - scene.fog.near) * Math.min(1, dt * 6);
+  scene.fog.far += (fogFar - scene.fog.far) * Math.min(1, dt * 6);
+  atmosphere.setOverview(overviewNoFog);
   if (wide) {
     // Scenic view is an actual orbital shot: aim at the planet centre and
     // place the camera far enough out that the complete sphere fits on both
