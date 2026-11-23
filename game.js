@@ -14,7 +14,8 @@ import { installBuildingRoadLayout } from './building-road-layout.js?v=20261014-
 import { createLakeside, isLakeWater, lakePoint, LAKE_WATER } from './lakeside.js?v=20261027-water-mask-v2';
 import { reduceSceneDensity } from './scene-density.js?v=20261014-clean-sidewalk';
 import { raiseGrassLevel } from './grass-level.js?v=20261021-norock';
-import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261021-walkable';
+import { createCollisionWorld, sweepSphere } from './collision-world.js?v=20261123-door-mail-v1';
+import { collectDeliverySites, createDeliveryPicker } from './delivery-sites.js?v=20261123-door-mail-v1';
 import { installSurfaceMaterials } from './surface-materials.js?v=20261021-granite';
 import { createManholes, MANHOLE_TEXTURES } from './manholes.js?v=20261021-02';
 import { installFootbridges, createFootbridgeWalk, FOOTBRIDGE_URL } from './footbridges.js?v=20261021-ramp-v3';
@@ -1505,6 +1506,7 @@ function addXp(n) {
 
 const pickupMarker = makeMarker(0xff5a4a, '📮');
 const dropMarker = makeMarker(0x38c76a, '🏠');
+let deliverySites=[],deliveryPicker=null,mailboxDisc=null;
 dropMarker.visible = false;
 let taskNoticeTimer = 0;
 function showTaskNotice() {
@@ -1515,30 +1517,26 @@ function showTaskNotice() {
 }
 
 function nextTask() {
+  const site=deliveryPicker.next(focusPos());
+  let mailbox=state.mailboxes[0];
+  if(!mailbox){mailbox=makeMailbox(site.q);state.mailboxes.push(mailbox);}
+  mailbox.position.copy(site.position);mailbox.quaternion.copy(site.q);mailbox.userData.q=site.q.clone();
+  const up=fUp(site.q,new THREE.Vector3());
+  if(!mailboxDisc)mailboxDisc=collisionWorld.addDisc(up,.5*S,'ActiveMailbox',PLANET.R);
+  else mailboxDisc.up.copy(up);
+  state.target=site.position.clone();state.targetQ=site.q.clone();
+  if(DEBUG)console.info('Doorstep task:',JSON.stringify({phase:state.phase,building:site.id,distance:Math.round(site.distance),position:site.position.toArray()}));
   if (state.phase === 'pickup') {
-    /* 优先选至少 50 米外的最近邮箱，让连续任务留出骑行距离。 */
-    const here = focusPos();
-    let mb = null, bd = Infinity;
-    for (const c of state.mailboxes) {
-      const d = c.position.distanceTo(here);
-      if (d > 50 * S && d < bd) { bd = d; mb = c; }
-    }
-    if (!mb) mb = state.mailboxes[Math.floor(Math.random() * state.mailboxes.length)];
-    state.target = mb.position.clone();
-    state.targetQ = mb.userData.q;
     placeMarker(pickupMarker, state.targetQ);
     dropMarker.visible = false;
     $('taskTitle').textContent = '新的信件';
-    $('taskDesc').textContent = '去红色邮箱领取下一封信';
+    $('taskDesc').textContent = '去建筑门前的红色邮箱领取信件';
     $('taskIcon').textContent = '📮';
   } else {
-    const q = findRoadFrame(2.5 * S, focusFrame(), 120 * S, true);
-    state.targetQ = q;
-    state.target = framePos(q, 0, new THREE.Vector3());
-    placeMarker(dropMarker, q);
+    placeMarker(dropMarker, state.targetQ);
     pickupMarker.visible = false;
     $('taskTitle').textContent = '送信中';
-    $('taskDesc').textContent = '把信送到绿色光柱的住户';
+    $('taskDesc').textContent = '把信送到绿色光柱下的门前邮箱';
     $('taskIcon').textContent = '✉️';
   }
   showTaskNotice();
@@ -2451,24 +2449,29 @@ async function boot() {
   syncBody(player, state.q, 0, state, 1);
   updateCamera(1);                      // dt=1 让镜头一次就位，不然开局会从远处飞过来
 
-  /* 星球周长 3.8 公里，邮箱要是撒满整颗星，最近的一个平均也在四百米外，
-     一趟送信得开两分钟。全都投在出生点这片街区里，最远 300 个身位。 */
-  const mbQ=new THREE.Quaternion(),mbU=new THREE.Vector3(),mbP=new THREE.Vector3();
-  for(let attempts=0;state.mailboxes.length<9&&attempts<3000;attempts++) {
-    const lane=trafficLanes.lanes[(Math.random()*trafficLanes.lanes.length)|0];
-    trafficLanes.sample({path:lane.id,distance:25+Math.random()*(lane.length-50)},mbP,mbQ);
-    if(mbP.distanceTo(player.position)>850)continue;
-    const forward=fFwd(mbQ,new THREE.Vector3());
-    mbP.addScaledVector(fRight(mbQ,new THREE.Vector3()),lane.half+10-lane.offset).normalize();
-    frameFromDir(mbP,forward,mbQ);
-    fUp(mbQ,mbU);
-    if(!paveDir(mbU)||driveDir(mbU)||blockedAt(mbQ,2.5))continue;
-    framePos(mbQ,0,mbP);
-    if(state.mailboxes.some(m=>m.position.distanceTo(mbP)<35))continue;
-    state.mailboxes.push(makeMailbox(mbQ));stampOcc(mbQ,.5*S);
-  }
-  if(state.mailboxes.length<9)throw new Error('没有找到足够的安全路边邮箱位置');
-
+  const projectDoorPoint=p=>{
+    const up=p.clone().sub(PLANET.C).normalize();
+    return PLANET.C.clone().addScaledVector(up,groundR(up));
+  };
+  const doorstepClear=(site,forward,project)=>{
+    const up=fUp(site.q,new THREE.Vector3());
+    if(!paveDir(up)||driveDir(up)||blockedAt(site.q,2.5))return false;
+    // The door approach must connect to the street without a wall/tree/pole.
+    for(let d=2;d<=24;d+=2){
+      const point=project(site.position.clone().addScaledVector(forward,d));
+      const q=frameFromDir(point.sub(PLANET.C).normalize(),forward);
+      if(blockedAt(q,1.5))return false;
+      if(driveDir(fUp(q,new THREE.Vector3())))return true;
+    }
+    return false;
+  };
+  deliverySites=collectDeliverySites(city,{center:PLANET.C,project:projectDoorPoint,accept:doorstepClear});
+  if(deliverySites.length<4)throw new Error('没有找到足够的安全建筑门前邮箱位置');
+  deliveryPicker=createDeliveryPicker(deliverySites,{distance:arcDist,available:site=>{
+    const forward=fFwd(site.q,new THREE.Vector3());
+    return doorstepClear(site,forward,projectDoorPoint);
+  }});
+  if(DEBUG)console.info('Doorstep sites:',JSON.stringify({count:deliverySites.length}));
   setProgress(0.96, '布置车流与街景…');
   placeParked(carVariants.length-(IS_MOBILE?4:6));
 
@@ -2486,6 +2489,10 @@ async function boot() {
 
   syncHud();
   nextTask();
+  if(DEBUG&&new URLSearchParams(location.search).has('mailtest')){
+    const {verifyDoorstepTasks}=await import('./tools/verify-doorstep-game.js');
+    verifyDoorstepTasks({state,player,PLANET,collisionWorld,nextTask,framePos,frameFromDir,syncBody,updateCamera});
+  }
   if (/(\?|&)fx/.test(location.search)) setInterval(() => { flyLetter(); coinPop(128); }, 700);
   setProgress(1, '出发！');
   $('loading').style.display = 'none';

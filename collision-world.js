@@ -153,7 +153,7 @@ export function createCollisionWorld(root, center = new THREE.Vector3()) {
     stats: { objects: shapes.length, occupiedCells: shapes.reduce((n, s) => n + s.occupied, 0), cellSize: CELL, bodyHeight: BODY_HEIGHT },
     blocked: query,
     explain(dir, radius = 0) { const names = []; query(dir, radius, names); return names; },
-    addDisc(up, radius, name = 'PlacedProp', distance = 600) { discs.push({ up: up.clone().normalize(), radius, name, distance }); },
+    addDisc(up, radius, name = 'PlacedProp', distance = 600) { const disc={ up: up.clone().normalize(), radius, name, distance };discs.push(disc);return disc; },
     // This image is used only for the minimap. Movement never samples a
     // latitude/longitude rectangle, avoiding inflated collisions near poles.
     map(width, height) {
